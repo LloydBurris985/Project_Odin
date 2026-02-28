@@ -36,6 +36,36 @@ Philosophy & Goals
 The project rejects conventional data paradigms (storage, search engines, servers) in favor of pure navigation. It aims to enable:
 
 Deterministic, verifiable access to any information.
+
+## Discovery & Odins Hall
+
+Odins Net uses **runways** — predefined or user-owned ranges of lattice masks (coordinates) — as the only mechanism for discovering and exchanging traffic. There are no central servers, DNS, or IP addresses; discovery is purely polling-based and offline-capable.
+
+### Key Concepts
+- **Runway**: A bounded range of masks (e.g. 10000–10099) that nodes poll for new coordinates.  
+  - Public runways: Well-known, low-traffic ranges for announcements and discovery.  
+  - Private runways: User-generated ranges for personal/group communication (like personal VPN namespaces).  
+- **Polling**: Nodes periodically scan their runways, fetch any coordinates they find (via mesh neighbors, Bluetooth, LoRa, sneakernet, NFC/QR drops, etc.), decode them with OdinsEye, and verify integrity via SHA-256.  
+- **Traffic**: Any valid coordinate is potential traffic — a message, file, announcement, update, or dead-drop. Invalid or irrelevant coords are silently ignored.
+
+### Odins Hall – The Primary Public Hub
+Every Odins Net node is expected to poll **Odins Hall** occasionally (default: once per day). It serves as the universal entry point:
+
+- **Masks**: 10000–10099 (100-mask range, small to keep polling light)  
+- **Purpose**: Announcements, new user coordinate publications, software updates, directory hints, emergency broadcasts, and initial discovery of other public/private runways.  
+- **Why mandatory?** New nodes or users start here to bootstrap into the network. Once you discover someone's primary runway or private coord, you can shift to direct/private polling and reduce hub checks.
+
+In code:
+```python
+from odins_net.nexus_hub import get_odins_hall_runway, poll_odins_hall
+
+hub_runway = get_odins_hall_runway()
+print(hub_runway)  # <Runway 'Odins-Hall' (10000-10099), public>
+
+# Quick poll example
+discoveries = poll_odins_hall(max_results=5)
+for item in discoveries:
+    print(f"Found at mask {item['mask']}: {item['decoded_size']} bytes")
 Temporal messaging and computation.
 Decentralized, infrastructure-free networking.
 Quantum-like verification and hierarchical exploration in future iterations.
