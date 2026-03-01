@@ -427,4 +427,55 @@ if __name__ == "__main__":
 
         else:
             print("Unknown command")
+            
+        elif cmd.startswith("reply "):
+            subject = cmd[6:].strip()  # everything after "reply "
+            if not subject:
+                print("Usage: reply <subject of original message>")
+                continue
+
+            # Find the original message in inbox by subject (case-insensitive partial match)
+            original = None
+            for item in user.inbox:
+                m = item["msg"]
+                if subject.lower() in m["subject"].lower():
+                    original = m
+                    break
+
+            if not original:
+                print(f"No message found with subject containing '{subject}'")
+                continue
+
+            print(f"Replying to: {original['subject']} from {original['from']}")
+
+            body = input("Reply body (multi-line, end with empty line):\n")
+            while True:
+                line = input()
+                if not line:
+                    break
+                body += "\n" + line
+
+            # Auto-chain: use same chain_id, increment seq
+            chain_id = original.get("chain_id")
+            seq = original.get("seq", 0) + 1
+
+            # Optional: use BNSRNG for next "quantum" prediction (as in Temporal)
+            if chain_id:
+                rng = BNSRNG(seed=chain_id)
+                predicted_offset = rng.advance_to(seq) * POLL_STEP_SIZE
+                print(f"Chained prediction offset: {predicted_offset} (for targeted polling)")
+
+            reply_msg = Message(
+                sender=user.username,
+                recipient=original["from"],
+                subject=f"Re: {original['subject']}",
+                body=body,
+                mode=original.get("mode", "async"),
+                chain_id=chain_id,
+                seq=seq,
+            )
+
+            result = send_message(user, eye, reply_msg)
+            print(f"Reply sent! Coord: {result['coord']}")
+            print(f"Dropped into: {result['runway']}")
         # Add compose/send later
