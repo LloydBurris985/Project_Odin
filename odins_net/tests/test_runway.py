@@ -82,6 +82,7 @@ def test_runway_polling():
             print(f"  Hash match: {original_hash == computed_hash}")
 
             if original_hash == computed_hash:
+                
                 print("  ✓ Valid round-trip decode")
             else:
                 print("  ✗ Hash mismatch – decode failed")
@@ -94,3 +95,46 @@ def test_runway_polling():
 
 if __name__ == "__main__":
     test_runway_polling()
+    
+def test_send_and_poll_simulation():
+    print("\n=== Messaging Send + Poll Integration Test ===\n")
+
+    user = UserState("testuser")  # temp state
+    eye = OdinsEye()
+    poller = create_default_poller()
+
+    # Compose & send a test message
+    msg = Message(
+        sender="testuser",
+        recipient="friend",
+        subject="Test Message via Runway",
+        body="This is a simulated send → poll round-trip test!",
+        mode="async",
+    )
+
+    send_result = send_message(user, eye, msg, use_hub=True)
+    print("Sent message:", send_result)
+
+    # Simulate poll (should "find" it if dummy fetch picks it up)
+    print("\nPolling for the message...")
+    discoveries = poller.poll_all(max_per_runway=5)
+
+    found = False
+    for runway, items in discoveries.items():
+        for item in items:
+            coord = item["coord"]
+            try:
+                received = Message.from_coord(coord)
+                if received.subject == "Test Message via Runway":
+                    print("Found our test message!")
+                    print(f"From: {received.sender}")
+                    print(f"Body: {received.body[:100]}...")
+                    found = True
+                    break
+            except:
+                pass
+
+    if not found:
+        print("No match in this simulation run (dummy fetch is random – try again)")
+
+    print("Test complete.")
