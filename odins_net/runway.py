@@ -146,6 +146,8 @@ class RunwayPoller:
 
 # Example usage (for README or tests)
 if __name__ == "__main__":
+    test_runway_polling()
+    test_send_and_poll_simulation()
     # Public hub runway (everyone polls this sometimes)
     odins_hall = Runway(10000, 10999, name="Odins-Hall", is_public=True, poll_interval=86400)
 
