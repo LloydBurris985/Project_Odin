@@ -351,19 +351,80 @@ def start_polling(user: UserState, eye: OdinsEye):
 if __name__ == "__main__":
     user = UserState.load()
     eye = OdinsEye()
+    poller = create_default_poller()  # includes Odins Hall + user's private runway
 
-    print(f"Welcome {user.username} – runway {user.runway_start} to {user.runway_start + user.runway_length}")
+    print(f"Welcome {user.username} – runway {user.runway_start} → {user.runway_start + user.runway_length}")
+    print("Commands: compose, inbox, sent, queue, suspect, poll, quit")
 
-    start_polling(user, eye)
+    start_polling(user, eye)  # background polling thread
 
     while True:
         cmd = input("\n> ").strip().lower()
-        if cmd == "inbox":
+
+        if cmd == "compose":
+            to = input("To: ").strip()
+            subject = input("Subject: ").strip()
+            body = input("Body (multi-line ok, end with empty line):\n")
+            while True:
+                line = input()
+                if not line:
+                    break
+                body += "\n" + line
+
+            mode = input("Mode (async/live) [async]: ").strip() or "async"
+            delivery = input("Delivery date (YYYY-MM-DD HH:MM) or empty: ").strip() or None
+
+            msg = Message(
+                sender=user.username,
+                recipient=to,
+                subject=subject,
+                body=body,
+                mode=mode,
+                delivery_date=delivery,
+            )
+
+            result = send_message(user, eye, msg)
+            print(f"Sent! Coord: {result['coord']}")
+            print(f"Dropped into: {result['runway']}")
+
+        elif cmd == "inbox":
+            if not user.inbox:
+                print("Inbox empty")
             for item in user.inbox:
                 m = item["msg"]
                 print(f"From {m['from']} | {m['subject']} | {m['sent_date']}")
+
+        elif cmd == "sent":
+            if not user.sent:
+                print("No sent messages")
+            for item in user.sent:
+                m = item["msg"]
+                print(f"To {m['to']} | {m['subject']} | {m['sent_date']}")
+
+        elif cmd == "queue":
+            if not user.queue:
+                print("Queue empty")
+            for item in user.queue:
+                m = item["msg"]
+                print(f"To {m['to']} | {m['subject']} | Delivery: {m['delivery_date']}")
+
+        elif cmd == "suspect":
+            if not user.suspect:
+                print("No flagged messages")
+            for item in user.suspect:
+                m = item["msg"]
+                print(f"Flagged {m.get('flag')} from {m['from']} | {m['subject']}")
+
+        elif cmd == "poll":
+            count = poll_inbox(user, eye, poller)
+            print(f"Poll complete – {count} new messages found")
+
         elif cmd == "quit":
             user.polling = False
             user.save()
+            print("Goodbye!")
             break
+
+        else:
+            print("Unknown command")
         # Add compose/send later
