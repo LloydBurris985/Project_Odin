@@ -67,6 +67,68 @@ print(f"Current position: mask {user.runway_start}")
 print("\nType ? for help | Q to quit\n")
 
 class UserState:
+    def main_menu(user: UserState, eye: OdinsEye, poller: RunwayPoller):
+    while True:
+        print("\n" + "="*60)
+        print(f" {BOLD}TEMPORAL INTERGALACTIC BBS – Main Menu{RESET}")
+        print("="*60)
+        print(f" User: {user.username}   Position: {user.runway_start}–{user.runway_start + user.runway_length}")
+        print(f" Last poll: {datetime.now().strftime('%Y-%m-%d %H:%M')} – {len(user.inbox)} unread")
+
+        print("\nAvailable Boards (runways):")
+        boards = [
+            ("1", "Odins-Hall", "Public hub & announcements", 10000, 10099),
+            ("2", "bubba-private", "Your personal mailbox & chains", user.runway_start, user.runway_start + user.runway_length),
+            # Add more dynamically from known runways later
+        ]
+        for num, name, desc, start, end in boards:
+            unread = " (NEW)" if name == "Odins-Hall" and len(user.inbox) > 0 else ""
+            print(f"  {num}. {name:<15} {desc} ({start}–{end}){unread}")
+
+        print("\nOther:")
+        print("  7. Poll Now")
+        print("  8. Compose / Post")
+        print("  9. Active Chains")
+        print(" 10. Queue (future delivery)")
+        print(" 11. Suspect / Flagged")
+        print(" 12. The Thing (disputes)")
+        print("  ?  Help")
+        print("  Q  Quit")
+
+        choice = input("\nEnter choice [1-12,?,Q]: ").strip().lower()
+
+        if choice == "q":
+            print("Goodbye, traveler.")
+            user.save()
+            break
+
+        elif choice == "?":
+            print_help()
+
+        elif choice == "7":
+            poll_inbox(user, eye, poller)
+            print(f"Poll complete – {len(user.inbox)} total messages")
+
+        elif choice == "8":
+            compose_post(user, eye)
+
+        elif choice in ["1", "2"]:  # board selection
+            board_idx = int(choice) - 1
+            board_name = boards[board_idx][1]
+            read_board(user, eye, board_name)
+
+        # Add more handlers later (chains, queue, etc.)
+
+def read_board(user: UserState, eye: OdinsEye, board_name: str):
+    print(f"\nEntering board: {board_name}")
+    # TODO: list threads/chains in this runway
+    # For now, just show recent inbox items as placeholder
+    for item in user.inbox[:10]:
+        m = item["msg"]
+        print(f"[{m['seq']}] {m['subject']} by {m['from']} ({m['sent_date']})")
+    print("\n[R]eply   [Q]uit board")
+    # etc.
+    
     """Persistent user state: inbox, sent, queue, chains, runway config."""
     def __init__(self, username: str):
         self.username = username
