@@ -227,7 +227,10 @@ def send_message(user: UserState, eye: OdinsEye, msg: Message, target_runway: Op
     user.save()
     return {"status": "dropped", "coord": coord, "runway": runway.name}
 
-def poll_inbox(user: UserState, eye: OdinsEye):
+def get_encryption_key(secret: bytes) -> bytes:
+    return Fernet(hashlib.sha256(secret).digest())
+    
+def poll_inbox(user: UserState, eye: Odinsdef):
     runway_start = user.runway_start
     runway_end = runway_start + user.runway_length
 
