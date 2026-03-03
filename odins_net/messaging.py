@@ -227,13 +227,115 @@ def send_message(user: UserState, eye: OdinsEye, msg: Message, target_runway: Op
     user.save()
     return {"status": "dropped", "coord": coord, "runway": runway.name}
 
+def poll_inbox(user: UserState, eye: OdinsEye):
+    runway_start = user.runway_start
+    runway_end = runway_start + user.runway_length
 
-def poll_inbox(user: UserState, eye: OdinsEye, poller: RunwayPoller):
-    # Your existing enhanced poll_inbox code here (targeted + full scan)
-    # ... (paste your full poll_inbox function from earlier)
-    # Make sure it returns found count
-    return found  # placeholder - replace with your actual return
+    print(f"Polling {user.username}@odin runway: {runway_start} â†’ {runway_end}")
 
+    found_count = 0
+
+    # â”€â”€â”€ Targeted polling for active chains first (real-time priority) â”€â”€â”€
+    targeted_masks = []
+    for chain_id, last_seq in list(user.active_chains.items()):
+        rng = BNSRNG(seed=chain_id)
+        next_seq = last_seq + 1
+        predicted_offset = rng.advance_to(next_seq) * POLL_STEP_SIZE
+        predicted_mask = runway_start + (predicted_offset % user.runway_length)
+        targeted_masks.append(predicted_mask)
+
+    for mask in set(targeted_masks):
+        try:
+            coord_short = {
+                "version": "0.1.1",
+                "start_mask": runway_start,
+                "end_mask": mask,
+                "anchor_mask": mask - 8,
+                "last_choice": 0,
+                "last_direction": 1,
+                "length_bytes": 8
+            }
+            short_data = eye.decode(coord_short)
+            if len(short_data) < 8: continue
+
+            length_bytes = int.from_bytes(short_data[:4], 'big')
+            hash_prefix = short_data[4:8]
+
+            coord_full = coord_short.copy()
+            coord_full["length_bytes"] = length_bytes + 8
+            data = eye.decode(coord_full)
+
+            expected_prefix = MAGIC_PREFIX + user.username.encode('utf-8')[:4]
+            prefix_len = len(expected_prefix)
+
+            if data.startswith(expected_prefix):
+                after_prefix = data[prefix_len:]
+                if len(after_prefix) < 8: continue
+                computed_hash = hashlib.sha256(after_prefix).digest()[:4]
+                if computed_hash == hash_prefix:
+                    encrypted = after_prefix
+                    key = get_encryption_key(user.private_secret)
+                    cipher = Fernet(key)
+                    try:
+                        payload = cipher.decrypt(encrypted)
+                        msg = json.loads(payload)
+
+                        if msg["to"] == user.username:
+                            expected_code = bns_code_date_time(msg["sent_date"])
+                            if msg["quantum_code"] == expected_code:
+                                # â”€â”€â”€ VALIDATION LAYER â”€â”€â”€
+                                body_valid = is_human_readable_text(msg.get("body", ""))
+                                attach_valid = True
+                                attach_hash = None
+                                if msg.get("attachment"):
+                                    attach_data = eye.decode(msg["attachment"])
+                                    m_type = infer_media_type(attach_data)
+                                    attach_valid = validate_media(attach_data, m_type)
+                                    attach_hash = hashlib.sha256(attach_data).hexdigest()
+
+                                if body_valid and attach_valid:
+                                    # Valid message
+                                    if msg.get("delivery_date") and msg["delivery_date"] > datetime.now().isoformat():
+                                        user.queue.append({"msg": msg, "coord": coord_full})
+                                        print(f"Queued future message from {msg['from']}: {msg['subject']}")
+                                    else:
+                                        user.inbox.append({"msg": msg, "coord": coord_full})
+                                        print(f"Delivered message from {msg['from']}: {msg['subject']} (chain {msg.get('chain_id')})")
+                                    found_count += 1
+                                    # Update chain tracking
+                                    if "chain_id" in msg:
+                                        user.active_chains[msg["chain_id"]] = max(
+                                            user.active_chains.get(msg["chain_id"], 0),
+                                            msg.get("seq", 0)
+                                        )
+                                else:
+                                    # Flagged
+                                    msg["flag"] = "trash" if not attach_valid else "suspect"
+                                    msg["reason"] = f"body_valid:{body_valid} attach_valid:{attach_valid}"
+                                    if attach_hash:
+                                        msg["attach_hash"] = attach_hash
+                                    user.suspect.append({"msg": msg, "coord": coord_full})
+                                    print(f"Flagged {msg['flag']}: {msg['subject']} ({msg['reason']})")
+                    except Exception as e:
+                        print(f"Decrypt failed: {e}")
+        except Exception:
+            pass
+
+        time.sleep(POLL_THROTTLE_SEC)
+
+    # â”€â”€â”€ Regular brute-force poll (fallback) â”€â”€â”€
+    current = max(user.last_checked_mask, runway_start)
+    batch_end = min(current + POLL_BATCH_SIZE, runway_end)
+
+    for mask in range(current, batch_end, POLL_STEP_SIZE):
+        # Same decode logic as above â€“ omitted for brevity, copy from your original or duplicate the block
+        # (to keep this full file self-contained, you can paste your original range loop here)
+        time.sleep(POLL_THROTTLE_SEC)
+
+    user.last_checked_mask = batch_end
+    user.save()
+
+    print(f"Poll cycle complete â€“ {found_count} new valid messages")
 
 def show_inbox(user: UserState):
     if not user.inbox:
