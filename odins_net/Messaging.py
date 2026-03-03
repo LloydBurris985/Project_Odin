@@ -30,7 +30,18 @@ except ImportError:
     MEDIA_LIBS_AVAILABLE = False
     print("Media validation disabled (install pillow, moviepy, pydub)")
 
-# Logging
+def get_message_flags(msg_data: Dict) -> str:
+    flags = []
+    if not msg_data.get("secret"):  # or check if encrypted field exists/matches
+        flags.append("[UNSEC]")
+    if msg_data.get("delivery_date") and msg_data["delivery_date"] > datetime.now().isoformat():
+        flags.append("[FUTURE]")
+    if msg_data.get("timestamp") and abs(msg_data["timestamp"] - int(time.time())) > 86400 * 30:  # >1 month off
+        if msg_data["timestamp"] < time.time():
+            flags.append("[PAST]")
+        else:
+            flags.append("[FUTURE]")
+    return " ".join(flags) if flags else ""defLogging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger("OdinsMessaging")
 
