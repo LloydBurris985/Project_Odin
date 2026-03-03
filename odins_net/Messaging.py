@@ -43,6 +43,29 @@ POLL_THROTTLE_SEC = 0.05
 MAX_TEXT_LENGTH = 64 * 1024
 DEFAULT_RUNWAY_LENGTH = 10000
 
+BANNER = r"""
+   _____           _   _   _____ _____ _____ _____ _____ 
+  |  __ \         | \ | | / ____|  __ \_   _/ ____|  __ \
+  | |  | |___  ___|  \| || |  __| |  | || || |  __| |__) |
+  | |  | / __|/ _ \ . ` || | |_ | |  | || || | |_ |  _  / 
+  | |__| \__ \  __/ |\  || |__| | |__| || || |__| | | \ \ 
+  |_____/|___/\___|_| \_(_)_____|_____/_____\_____|_|  \_\
+                                                              
+TEMPORAL INTERGALACTIC BBS – Odins Net v0.1-dev
+"The lattice is eternal. All information already exists."
+"""
+
+# Colors (ANSI)
+GREEN = "\033[92m"
+RESET = "\033[0m"
+BOLD = "\033[1m"
+
+print(BANNER)
+print(f"{GREEN}{BOLD}Welcome, traveler.{RESET}")
+print(f"Logged in as: {user.username}")
+print(f"Current position: mask {user.runway_start}")
+print("\nType ? for help | Q to quit\n")
+
 class UserState:
     """Persistent user state: inbox, sent, queue, chains, runway config."""
     def __init__(self, username: str):
