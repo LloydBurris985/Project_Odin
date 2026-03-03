@@ -259,79 +259,83 @@ def start_polling(user: UserState, eye: OdinsEye):
 
     threading.Thread(target=poll_loop, daemon=True).start()
 
-
 if __name__ == "__main__":
     user = UserState.load()
     eye = OdinsEye()
     poller = create_default_poller()
 
     print(BANNER)
-    print(f"{GREEN}Welcome to the Temporal Intergalactic BBS{RESET}")
+    print(f"{GREEN}{BOLD}Welcome to the Temporal Intergalactic BBS{RESET}")
     print(f"Logged in as: {user.username}")
     print(f"Runway: {user.runway_start}–{user.runway_start + user.runway_length}")
-    print("Type ? for help | Q to quit\n")
+    print("Type ? for help at any prompt | Q to quit\n")
 
-    start_polling(user, eye)
+    start_polling(user, eye)  # background thread
 
     while True:
-        cmd = input("> ").strip().lower()
+        print("\n" + "-" * 60)
+        print(f"{BOLD}TIBBS Main Menu{RESET}")
+        print("-" * 60)
+        print(f"User: {user.username}   Position: {user.runway_start}–{user.runway_start + user.runway_length}")
+        print(f"Last poll: {datetime.now().strftime('%Y-%m-%d %H:%M')}   Unread: {len(user.inbox)}")
 
-        if cmd in ["q", "quit"]:
+        print("\nBoards (runways):")
+        boards = [
+            ("1", "Odins-Hall", "Public hub & announcements", 10000, 10099),
+            ("2", "bubba-private", "Your personal mailbox & chains", user.runway_start, user.runway_start + user.runway_length),
+            # Add dynamic boards later from discovered runways
+        ]
+        for num, name, desc, start, end in boards:
+            unread = " (NEW)" if name == "Odins-Hall" and len(user.inbox) > 0 else ""
+            print(f"  {num}. {name:<15} {desc} ({start}–{end}){unread}")
+
+        print("\nOther:")
+        print("  7. Poll Now")
+        print("  8. Compose / Post")
+        print("  9. Active Chains")
+        print(" 10. Queue (future delivery)")
+        print(" 11. Suspect / Flagged")
+        print(" 12. The Thing (disputes)")
+        print("  ?  Help")
+        print("  Q  Quit")
+
+        choice = input("\nEnter choice [1-12,?,Q]: ").strip().lower()
+
+        if choice in ["q", "quit"]:
             user.polling = False
             user.save()
             print("Goodbye, traveler.")
             break
 
-        elif cmd in ["?", "help"]:
+        elif choice in ["?", "help"]:
             print("""
-Commands:
-  poll        – Check runways now
-  inbox       – Show received messages
-  sent        – Show sent messages
-  queue       – Future delivery messages
-  suspect     – Flagged messages
-  compose     – Write new message (coming soon)
-  reply <id>  – Reply to inbox message by number
-  ? / help    – This help
-  Q / quit    – Exit
+TIBBS Commands:
+  1-6: Enter a board (poll & read threads)
+  7: Poll now (check for new messages)
+  8: Compose new message/post
+  9: View active chains
+ 10: View queued future messages
+ 11: View flagged suspect messages
+ 12: View active Things (disputes)
+  ?: Show this help
+  Q: Quit & save
 """)
+            input("Press Enter to continue...")
 
-        elif cmd == "poll":
+        elif choice == "7":
             count = poll_inbox(user, eye, poller)
             print(f"Poll complete – {count} new messages found")
+            input("Press Enter to continue...")
 
-        elif cmd == "inbox":
-            show_inbox(user)
+        elif choice == "8":
+            print("Compose mode – coming in next chunk")
+            # We'll add compose next
 
-        elif cmd == "sent":
-            if not user.sent:
-                print("No sent messages.")
-            else:
-                for i, item in enumerate(user.sent, 1):
-                    m = item["msg"]
-                    print(f"{i}. {m['subject']} to {m['to']} ({m['sent_date']})")
-
-        elif cmd == "queue":
-            if not user.queue:
-                print("Queue empty.")
-            else:
-                for i, item in enumerate(user.queue, 1):
-                    m = item["msg"]
-                    print(f"{i}. {m['subject']} to {m['to']} (deliver: {m['delivery_date']})")
-
-        elif cmd == "suspect":
-            if not user.suspect:
-                print("No flagged messages.")
-            else:
-                for i, item in enumerate(user.suspect, 1):
-                    m = item["msg"]
-                    print(f"{i}. [FLAGGED {m.get('flag','?')}] {m['subject']} from {m['from']}")
-
-        elif cmd == "compose":
-            print("Compose mode – not implemented yet")
-
-        elif cmd.startswith("reply "):
-            print("Reply mode – not fully integrated yet")
+        elif choice in ["1", "2"]:
+            board_idx = int(choice) - 1
+            board_name = boards[board_idx][1]
+            read_board(user, eye, board_name)
 
         else:
-            print("Unknown command. Type ? for help.")
+            print("Invalid choice. Type ? for help.")
+
