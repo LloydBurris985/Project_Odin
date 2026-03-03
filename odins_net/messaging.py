@@ -433,8 +433,54 @@ TIBBS Commands:
             input("Press Enter to continue...")
 
         elif choice == "8":
-            print("Compose mode – coming in next chunk")
-            # We'll add compose next
+            print("\nCompose / Post Mode")
+            print("1. Post to a board (public/private runway)")
+            print("2. Private message (direct chain)")
+            sub_choice = input("Choose [1/2]: ").strip()
+
+            to = input("To (username or leave blank for public post): ").strip()
+            subject = input("Subject: ").strip()
+            print("Body (multi-line, end with empty line):")
+            body_lines = []
+            while True:
+                line = input()
+                if not line:
+                    break
+                body_lines.append(line)
+            body = "\n".join(body_lines)
+
+            mode = input("Mode (async/live) [async]: ").strip() or "async"
+            delivery = input("Delivery date (YYYY-MM-DD HH:MM) or empty: ").strip() or None
+
+            msg = Message(
+                sender=user.username,
+                recipient=to if to else "public",
+                subject=subject,
+                body=body,
+                mode=mode,
+                delivery_date=delivery,
+            )
+
+            # Choose runway/board (simple for now)
+            runway = None
+            if sub_choice == "1":
+                print("Available boards:")
+                for i, (num, name, _, _, _) in enumerate(boards, 1):
+                    print(f"  {i}. {name}")
+                board_num = input("Select board number: ").strip()
+                try:
+                    board_idx = int(board_num) - 1
+                    runway = Runway(boards[board_idx][3], boards[board_idx][4], name=boards[board_idx][1])
+                except:
+                    print("Invalid – using Odins Hall")
+                    runway = get_odins_hall_runway()
+            else:
+                runway = None  # direct private chain
+
+            result = send_message(user, eye, msg, target_runway=runway)
+            print(f"Message sent! Coord: {result['coord']}")
+            print(f"Dropped into: {result['runway']}")
+            input("Press Enter to continue...")
 
         elif choice in ["1", "2"]:
             board_idx = int(choice) - 1
