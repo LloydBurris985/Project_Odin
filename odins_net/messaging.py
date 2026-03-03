@@ -1,0 +1,337 @@
+# odins_net/messaging.py
+# Unified Odins Mail + Odins Temporal – Async chained & live temporal messaging
+# MIT License
+
+import json
+import time
+import hashlib
+import secrets
+import math
+from datetime import datetime
+from typing import Dict, List, Optional, Any
+import threading
+import logging
+from io import BytesIO
+
+from .core import OdinsEye
+from .rng import BNSRNG
+from .runway import Runway, RunwayPoller
+from .nexus_hub import get_odins_hall_runway, create_default_poller
+from cryptography.fernet import Fernet
+
+# Optional media validation
+try:
+    from PIL import Image
+    import moviepy.editor as mp
+    from pydub import AudioSegment
+    MEDIA_LIBS_AVAILABLE = True
+except ImportError:
+    MEDIA_LIBS_AVAILABLE = False
+
+# Logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
+logger = logging.getLogger("OdinsMessaging")
+
+# Globals
+MAGIC_PREFIX = b"AB42"
+POLL_INTERVAL_SEC = 60
+POLL_BATCH_SIZE = 1000
+POLL_STEP_SIZE = 5
+POLL_THROTTLE_SEC = 0.05
+MAX_TEXT_LENGTH = 64 * 1024
+DEFAULT_RUNWAY_LENGTH = 10000
+
+GREEN = "\033[92m"
+RESET = "\033[0m"
+BOLD = "\033[1m"
+
+BANNER = r"""
+   _____           _   _   _____ _____ _____ _____ _____ 
+  |  __ \         | \ | | / ____|  __ \_   _/ ____|  __ \
+  | |  | |___  ___|  \| || |  __| |  | || || |  __| |__) |
+  | |  | / __|/ _ \ . ` || | |_ | |  | || || | |_ |  _  / 
+  | |__| \__ \  __/ |\  || |__| | |__| || || |__| | | \ \ 
+  |_____/|___/\___|_| \_(_)_____|_____/_____\_____|_|  \_\
+                                                              
+TEMPORAL INTERGALACTIC BBS – Odins Net v0.1-dev
+"The lattice is eternal. All information already exists."
+"""
+
+def get_message_flags(msg_data: Dict) -> str:
+    flags = []
+    if not msg_data.get("secret"):
+        flags.append("[UNSEC]")
+    if msg_data.get("delivery_date") and msg_data["delivery_date"] > datetime.now().isoformat():
+        flags.append("[FUTURE]")
+    if msg_data.get("timestamp") and abs(msg_data["timestamp"] - int(time.time())) > 86400 * 30:
+        if msg_data["timestamp"] < time.time():
+            flags.append("[PAST]")
+        else:
+            flags.append("[FUTURE]")
+    return " ".join(flags) if flags else ""
+
+
+class UserState:
+    def __init__(self, username: str):
+        self.username = username
+        self.private_secret = secrets.token_bytes(32)
+        self.runway_start = self._compute_runway_start()
+        self.runway_length = DEFAULT_RUNWAY_LENGTH
+        self.inbox: List[Dict] = []
+        self.sent: List[Dict] = []
+        self.queue: List[Dict] = []
+        self.suspect: List[Dict] = []
+        self.active_chains: Dict[str, int] = {}
+        self.last_checked_mask = self.runway_start
+        self.polling = False
+
+    def _compute_runway_start(self) -> int:
+        h = hashlib.sha256(self.private_secret + self.username.encode()).digest()
+        return 50000 + int.from_bytes(h[:8], 'big') % 100000
+
+    def save(self, path: str = "odin_state.json"):
+        state = {
+            "username": self.username,
+            "private_secret": self.private_secret.hex(),
+            "runway_start": self.runway_start,
+            "runway_length": self.runway_length,
+            "inbox": self.inbox,
+            "sent": self.sent,
+            "queue": self.queue,
+            "suspect": self.suspect,
+            "active_chains": self.active_chains,
+            "last_checked_mask": self.last_checked_mask
+        }
+        with open(path, "w") as f:
+            json.dump(state, f, indent=2)
+        logger.info(f"State saved for {self.username}")
+
+    @classmethod
+    def load(cls, path: str = "odin_state.json") -> "UserState":
+        try:
+            with open(path) as f:
+                state = json.load(f)
+            user = cls(state["username"])
+            user.private_secret = bytes.fromhex(state["private_secret"])
+            user.runway_start = state.get("runway_start", user._compute_runway_start())
+            user.runway_length = state.get("runway_length", DEFAULT_RUNWAY_LENGTH)
+            user.inbox = state.get("inbox", [])
+            user.sent = state.get("sent", [])
+            user.queue = state.get("queue", [])
+            user.suspect = state.get("suspect", [])
+            user.active_chains = state.get("active_chains", {})
+            user.last_checked_mask = state.get("last_checked_mask", user.runway_start)
+            return user
+        except FileNotFoundError:
+            username = input("Enter username (e.g. bubba): ").strip()
+            return cls(username)
+
+
+class Message:
+    def __init__(
+        self,
+        sender: str,
+        recipient: str,
+        subject: str,
+        body: str,
+        mode: str = "async",
+        delivery_date: Optional[str] = None,
+        attachment_coord: Optional[Dict] = None,
+        parent_code: Optional[int] = None,
+        chain_id: Optional[str] = None,
+        seq: int = 0,
+    ):
+        self.sender = sender
+        self.recipient = recipient
+        self.subject = subject
+        self.body = body[:MAX_TEXT_LENGTH]
+        self.mode = mode.lower()
+        self.delivery_date = delivery_date
+        self.attachment = attachment_coord
+        self.parent_code = parent_code
+        self.chain_id = chain_id
+        self.seq = seq
+        self.sent_date = datetime.now().isoformat()
+        self.timestamp = int(time.time())
+        self.status = "queued" if delivery_date else "sent"
+
+    def serialize(self) -> bytes:
+        data = {
+            "from": self.sender,
+            "to": self.recipient,
+            "subject": self.subject,
+            "body": self.body,
+            "sent_date": self.sent_date,
+            "delivery_date": self.delivery_date,
+            "attachment": self.attachment,
+            "parent_code": self.parent_code,
+            "chain_id": self.chain_id,
+            "seq": self.seq,
+            "mode": self.mode,
+            "timestamp": self.timestamp,
+        }
+        return json.dumps(data).encode()
+
+    @classmethod
+    def deserialize(cls, raw: bytes) -> "Message":
+        data = json.loads(raw)
+        return cls(
+            sender=data["from"],
+            recipient=data["to"],
+            subject=data["subject"],
+            body=data["body"],
+            mode=data["mode"],
+            delivery_date=data.get("delivery_date"),
+            attachment_coord=data.get("attachment"),
+            parent_code=data.get("parent_code"),
+            chain_id=data.get("chain_id"),
+            seq=data.get("seq", 0),
+        )
+
+
+def send_message(user: UserState, eye: OdinsEye, msg: Message, target_runway: Optional[Runway] = None, use_hub: bool = True) -> Dict[str, Any]:
+    if msg.mode == "async":
+        if not msg.chain_id:
+            rng = BNSRNG(seed=f"{msg.sender}{msg.recipient}{msg.sent_date}")
+            msg.chain_id = str(rng.next())
+            msg.seq = 0
+        else:
+            msg.seq = user.active_chains.get(msg.chain_id, 0) + 1
+        user.active_chains[msg.chain_id] = msg.seq
+
+    key = Fernet(hashlib.sha256(user.private_secret).digest())
+    cipher = Fernet(key)
+    serialized = msg.serialize()
+    encrypted = cipher.encrypt(serialized)
+
+    recipient_prefix = msg.recipient.encode('utf-8')[:4]
+    full_prefix = MAGIC_PREFIX + recipient_prefix
+    prefixed = full_prefix + encrypted
+    length_bytes = len(prefixed).to_bytes(4, 'big')
+    hash_prefix = hashlib.sha256(prefixed).digest()[:4]
+    full_payload = length_bytes + hash_prefix + prefixed
+
+    coord = eye.encode(full_payload)
+
+    runway = target_runway or get_odins_hall_runway() if use_hub else None
+    if not runway:
+        raise ValueError("No runway specified")
+
+    if msg.delivery_date and msg.delivery_date > datetime.now().isoformat():
+        user.queue.append({"msg": msg.__dict__, "coord": coord})
+        logger.info(f"Queued future msg to {msg.recipient} (chain {msg.chain_id})")
+    else:
+        user.sent.append({"msg": msg.__dict__, "coord": coord})
+        logger.info(f"Sent msg to {msg.recipient} (chain {msg.chain_id}, seq {msg.seq})")
+
+    user.save()
+    return {"status": "dropped", "coord": coord, "runway": runway.name}
+
+
+def poll_inbox(user: UserState, eye: OdinsEye, poller: RunwayPoller):
+    # Your existing enhanced poll_inbox code here (targeted + full scan)
+    # ... (paste your full poll_inbox function from earlier)
+    # Make sure it returns found count
+    return found  # placeholder - replace with your actual return
+
+
+def show_inbox(user: UserState):
+    if not user.inbox:
+        print("Inbox is empty.")
+        return
+    print("\nInbox:")
+    for i, item in enumerate(user.inbox, 1):
+        msg = item["msg"]
+        flags = get_message_flags(msg)
+        print(f"{i:2}. {flags} {msg['subject']} from {msg['from']} ({msg['sent_date']})")
+        body_preview = msg['body'][:60] + "..." if len(msg['body']) > 60 else msg['body']
+        print(f"   {body_preview}")
+
+
+def start_polling(user: UserState, eye: OdinsEye):
+    poller = create_default_poller()
+    user.polling = True
+
+    def poll_loop():
+        while user.polling:
+            poll_inbox(user, eye, poller)
+            time.sleep(POLL_INTERVAL_SEC)
+
+    threading.Thread(target=poll_loop, daemon=True).start()
+
+
+if __name__ == "__main__":
+    user = UserState.load()
+    eye = OdinsEye()
+    poller = create_default_poller()
+
+    print(BANNER)
+    print(f"{GREEN}Welcome to the Temporal Intergalactic BBS{RESET}")
+    print(f"Logged in as: {user.username}")
+    print(f"Runway: {user.runway_start}–{user.runway_start + user.runway_length}")
+    print("Type ? for help | Q to quit\n")
+
+    start_polling(user, eye)
+
+    while True:
+        cmd = input("> ").strip().lower()
+
+        if cmd in ["q", "quit"]:
+            user.polling = False
+            user.save()
+            print("Goodbye, traveler.")
+            break
+
+        elif cmd in ["?", "help"]:
+            print("""
+Commands:
+  poll        – Check runways now
+  inbox       – Show received messages
+  sent        – Show sent messages
+  queue       – Future delivery messages
+  suspect     – Flagged messages
+  compose     – Write new message (coming soon)
+  reply <id>  – Reply to inbox message by number
+  ? / help    – This help
+  Q / quit    – Exit
+""")
+
+        elif cmd == "poll":
+            count = poll_inbox(user, eye, poller)
+            print(f"Poll complete – {count} new messages found")
+
+        elif cmd == "inbox":
+            show_inbox(user)
+
+        elif cmd == "sent":
+            if not user.sent:
+                print("No sent messages.")
+            else:
+                for i, item in enumerate(user.sent, 1):
+                    m = item["msg"]
+                    print(f"{i}. {m['subject']} to {m['to']} ({m['sent_date']})")
+
+        elif cmd == "queue":
+            if not user.queue:
+                print("Queue empty.")
+            else:
+                for i, item in enumerate(user.queue, 1):
+                    m = item["msg"]
+                    print(f"{i}. {m['subject']} to {m['to']} (deliver: {m['delivery_date']})")
+
+        elif cmd == "suspect":
+            if not user.suspect:
+                print("No flagged messages.")
+            else:
+                for i, item in enumerate(user.suspect, 1):
+                    m = item["msg"]
+                    print(f"{i}. [FLAGGED {m.get('flag','?')}] {m['subject']} from {m['from']}")
+
+        elif cmd == "compose":
+            print("Compose mode – not implemented yet")
+
+        elif cmd.startswith("reply "):
+            print("Reply mode – not fully integrated yet")
+
+        else:
+            print("Unknown command. Type ? for help.")
