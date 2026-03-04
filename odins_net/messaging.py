@@ -408,6 +408,20 @@ def read_board(user: UserState, eye: OdinsEye, board_name: str):
         print("Invalid command. Use R #, P, or Q.")
 
     input("Press Enter to return to main menu...")
+
+def get_known_boards(user: UserState):
+    # Start with fixed ones
+    known = [
+        ("1", "Odins-Hall", "Public hub & announcements", 10000, 10099),
+        ("2", "bubba-private", "Your personal mailbox & chains", user.runway_start, user.runway_start + user.runway_length),
+    ]
+
+    # Add from active chains (as special "thread boards")
+    for chain_id in user.active_chains:
+        known.append((str(len(known)+1), f"Chain-{chain_id[:8]}", "Active conversation thread", 0, 0))  # placeholder range
+
+    # Future: scan discovered runways from poll results or local cache
+    return known
     
 def start_polling(user: UserState, eye: OdinsEye):
     poller = create_default_poller()
