@@ -570,7 +570,7 @@ TIBBS Commands:
 def pause():
     input("Press Enter to continue...")
     
-                elif choice == "8":
+elif choice == "8":
             print("\n" + "="*50)
             print(f"{BOLD}Compose / Post – New Message{RESET}")
             print("="*50)
