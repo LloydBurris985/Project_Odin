@@ -682,9 +682,57 @@ TIBBS Commands:
         print(f"Poll complete – {count} new messages found")
         input("Press Enter to continue...")
 
-    elif choice == "8":
-        # Your compose code here (from earlier paste)
-        print("Compose mode – paste your version or say 'skip for now'")
+            elif choice == "8":
+            print("\n" + "="*50)
+            print(f"{BOLD}Compose / Post{RESET}")
+            print("="*50)
+            print("1. Post to a board (runway)")
+            print("2. Private message (direct chain)")
+            sub_choice = input("Choose [1/2]: ").strip()
+
+            to = input("To (username or blank for public/board post): ").strip()
+            subject = input("Subject: ").strip()
+            print("Body (multi-line, end with empty line):")
+            body_lines = []
+            while True:
+                line = input()
+                if not line and body_lines:  # empty line after content
+                    break
+                body_lines.append(line)
+            body = "\n".join(body_lines)
+
+            mode = input("Mode (async/live) [async]: ").strip() or "async"
+            delivery = input("Delivery date (YYYY-MM-DD HH:MM) or empty: ").strip() or None
+
+            msg = Message(
+                sender=user.username,
+                recipient=to if to else "public",
+                subject=subject,
+                body=body,
+                mode=mode,
+                delivery_date=delivery,
+            )
+
+            runway = None
+            if sub_choice == "1":
+                print("\nAvailable boards:")
+                for i, (num, name, _, start, end) in enumerate(boards, 1):
+                    print(f"  {i}. {name} ({start}–{end})")
+                board_pick = input("Select board number (or Enter for Odins-Hall): ").strip()
+                if board_pick:
+                    try:
+                        idx = int(board_pick) - 1
+                        runway = Runway(boards[idx][3], boards[idx][4], name=boards[idx][1])
+                    except:
+                        print("Invalid – defaulting to Odins-Hall")
+                runway = runway or get_odins_hall_runway()
+            else:
+                runway = None  # private chain
+
+            result = send_message(user, eye, msg, target_runway=runway)
+            print(f"\nMessage sent! Coord: {result['coord']}")
+            print(f"Dropped into: {result['runway']}")
+            input("Press Enter to continue...")
 
     elif choice == "9":
         if not user.active_chains:
