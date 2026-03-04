@@ -727,7 +727,17 @@ elif choice == "8":
             print("Invalid choice or chain not found.")
         input("Press Enter to continue...")
 
-    
+            elif choice.isdigit():
+            try:
+                board_idx = int(choice) - 1
+                board_name = boards[board_idx][1]
+                read_board(user, eye, board_name)
+            except IndexError:
+                print("Invalid board number.")
+            except Exception as e:
+                print(f"Error entering board: {e}")
+            input("Press Enter to continue...")
+
 
     else:
         print("Invalid choice. Type ? for help.")
