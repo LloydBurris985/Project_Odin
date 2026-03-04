@@ -451,7 +451,7 @@ def read_board(user: UserState, eye: OdinsEye, board_name: str):
     threads = {}
     for item in user.inbox:
         msg = item["msg"]
-        chain_id = msg.get("chain_id", "no-chain")
+        chain_id = msg.get("chain_id", "no-chain-" + str(hash(msg['subject'])))
         seq = msg.get("seq", 0)
         if chain_id not in threads:
             threads[chain_id] = []
@@ -463,7 +463,6 @@ def read_board(user: UserState, eye: OdinsEye, board_name: str):
         print("Threads / Chains:")
         thread_list = sorted(threads.items(), key=lambda x: max(m[0] for m in x[1]), reverse=True)
         for i, (chain_id, messages) in enumerate(thread_list, 1):
-            # Sort by seq
             messages.sort(key=lambda x: x[0])
             first_msg = messages[0][1]
             flags = get_message_flags(first_msg)
@@ -473,8 +472,8 @@ def read_board(user: UserState, eye: OdinsEye, board_name: str):
     print("\nCommands:")
     print("  [N]umber to read thread")
     print("  [R]eply to thread (pick number)")
-    print("  [Q]uit board")
     print("  [P]oll this board now")
+    print("  [Q]uit board")
 
     sub_cmd = input("> ").strip().lower()
 
@@ -483,8 +482,11 @@ def read_board(user: UserState, eye: OdinsEye, board_name: str):
             thread_num = int(sub_cmd.split()[1]) - 1
             chain_id, messages = thread_list[thread_num]
             messages.sort(key=lambda x: x[0])
-            parent_msg = messages[-1][1]  # last message in chain
+            parent_msg = messages[-1][1]  # last message
             print(f"Replying to thread [{chain_id}] - {parent_msg['subject']}")
+            print(f"From: {parent_msg['from']} ({parent_msg['sent_date']})")
+            print(f"Body preview: {parent_msg['body'][:100]}...")
+
             body = ""
             print("Reply body (multi-line, end with empty line):")
             while True:
@@ -511,13 +513,13 @@ def read_board(user: UserState, eye: OdinsEye, board_name: str):
             result = send_message(user, eye, reply_msg)
             print(f"Reply sent! Coord: {result['coord']}")
             print(f"Dropped into: {result['runway']}")
-        except:
-            print("Invalid thread number or no messages.")
+        except Exception as e:
+            print(f"Error: {e}")
     elif sub_cmd == "p":
         count = poll_inbox(user, eye, poller)
         print(f"Board poll complete – {count} new messages")
     elif sub_cmd == "q":
-        pass  # just exit
+        pass
     else:
         print("Invalid command. Use R #, P, or Q.")
 
