@@ -361,6 +361,9 @@ def read_board(user: UserState, eye: OdinsEye, board_name: str):
 
             print(f"Replying to thread [{chain_id}] - {parent_msg['subject']}")
             print(f"From: {parent_msg['from']} ({parent_msg['sent_date']})")
+            print(f"Body preview: {parent_msg['body'][:100]}{'...' if len(parent_msg['body']) > 100 else ''}")
+            print(f"Mode: {parent_msg.get('mode', 'async')} | Status: {parent_msg.get('status', 'sent')}")
+            print(f"From: {parent_msg['from']} ({parent_msg['sent_date']})")
             print(f"Body preview: {parent_msg['body'][:100]}...")
 
             body = ""
