@@ -681,7 +681,9 @@ TIBBS Commands:
         count = poll_inbox(user, eye, poller)
         print(f"Poll complete – {count} new messages found")
         input("Press Enter to continue...")
-
+def pause():
+    input("Press Enter to continue...")
+    
             elif choice == "8":
             print("\n" + "="*50)
             print(f"{BOLD}Compose / Post{RESET}")
