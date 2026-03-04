@@ -460,7 +460,7 @@ if __name__ == "__main__":
     poller = create_default_poller()
 
     print(BANNER)
-    print(f"{GREEN}{BOLD}Welcome to the Temporal Intergalactic BBS{RESET}")
+    print(f"{GREEN}{BOLD}Welcome to the Temporal Ielifgalactic BBS{RESET}")
     print(f"Logged in as: {user.username}")
     print(f"Runway: {user.runway_start}–{user.runway_start + user.runway_length}")
     print("Type ? for help at any prompt | Q to quit\n")
@@ -728,7 +728,17 @@ elif choice == "8":
             print("Invalid choice or chain not found.")
         input("Press Enter to continue...")
 
-            
+     elif choice.isdigit():
+            try:
+                board_idx = int(choice) - 1
+                if 0 <= board_idx < len(boards):
+                    board_name = boards[board_idx][1]
+                    read_board(user, eye, board_name)
+                else:
+                    print("Invalid board number.")
+            except Exception as e:
+                print(f"Error entering board: {e}")
+            input("Press Enter to continue...")
 
 
     else:
