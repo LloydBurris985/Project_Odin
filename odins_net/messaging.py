@@ -480,11 +480,7 @@ if __name__ == "__main__":
         print(f"Last poll: {datetime.now().strftime('%Y-%m-%d %H:%M')}   Unread: {len(user.inbox)}")
 
         print("\nBoards (runways):")
-        boards = [
-            ("1", "Odins-Hall", "Public hub & announcements", 10000, 10099),
-            ("2", "bubba-private", "Your personal mailbox & chains", user.runway_start, user.runway_start + user.runway_length),
-            # Add dynamic boards later from discovered runways
-        ]
+        boards = get_dynamic_boards(user)
         for num, name, desc, start, end in boards:
             unread = " (NEW)" if name == "Odins-Hall" and len(user.inbox) > 0 else ""
             print(f"  {num}. {name:<15} {desc} ({start}–{end}){unread}")
