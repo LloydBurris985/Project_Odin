@@ -70,7 +70,6 @@ def get_message_flags(msg_data: Dict) -> str:
             flags.append("[FUTURE]")
     return " ".join(flags) if flags else ""
 
-
 class UserState:
     def __init__(self, username: str):
         self.username = username
@@ -125,7 +124,6 @@ class UserState:
         except FileNotFoundError:
             username = input("Enter username (e.g. bubba): ").strip()
             return cls(username)
-
 
 class Message:
     def __init__(
@@ -188,7 +186,6 @@ class Message:
             seq=data.get("seq", 0),
         )
 
-
 def send_message(user: UserState, eye: OdinsEye, msg: Message, target_runway: Optional[Runway] = None, use_hub: bool = True) -> Dict[str, Any]:
     if msg.mode == "async":
         if not msg.chain_id:
@@ -230,11 +227,6 @@ def send_message(user: UserState, eye: OdinsEye, msg: Message, target_runway: Op
 def get_encryption_key(secret: bytes) -> bytes:
     return Fernet(hashlib.sha256(secret).digest())
     
-
-
-
-
-
 def poll_inbox(user: UserState, eye: OdinsEye, poller: RunwayPoller):
     logger.info(f"Polling for {user.username}...")
 
@@ -605,7 +597,69 @@ TIBBS Commands:
 def pause():
     input("Press Enter to continue...")
     
-    
+elif choice == "8":
+            print("\n" + "="*60)
+            print(f"{BOLD}Compose / Post – New Message{RESET}")
+            print("="*60)
+            print("1. Post to a board (runway)")
+            print("2. Private message (direct chain)")
+            sub_choice = input("Choose [1/2]: ").strip() or "1"
+
+            to = input("To (username or blank for public/board post): ").strip()
+            subject = input("Subject: ").strip()
+
+            print("Body (multi-line, end with empty line):")
+            body_lines = []
+            while True:
+                line = input()
+                if not line and body_lines:  # stop on empty after content
+                    break
+                body_lines.append(line)
+            body = "\n".join(body_lines)
+
+            if not body.strip():
+                print("Empty body – compose cancelled.")
+                input("Press Enter to continue...")
+                continue
+
+            mode = input("Mode (async/live) [async]: ").strip().lower() or "async"
+            delivery = input("Delivery date (YYYY-MM-DD HH:MM) or empty for immediate: ").strip() or None
+
+            msg = Message(
+                sender=user.username,
+                recipient=to if to else "public",
+                subject=subject,
+                body=body,
+                mode=mode,
+                delivery_date=delivery,
+            )
+
+            runway = None
+            if sub_choice == "1":
+                boards = get_dynamic_boards(user)  # use dynamic list
+                print("\nAvailable boards:")
+                for i, (num, name, desc, start, end) in enumerate(boards, 1):
+                    print(f"  {i}. {name} ({desc})")
+                board_pick = input("Select board number (or Enter for Odins-Hall): ").strip()
+                if board_pick:
+                    try:
+                        idx = int(board_pick) - 1
+                        runway = Runway(boards[idx][3], boards[idx][4], name=boards[idx][1])
+                    except:
+                        print("Invalid – defaulting to Odins-Hall")
+                runway = runway or get_odins_hall_runway()
+            else:
+                runway = None  # direct private chain
+
+            result = send_message(user, eye, msg, target_runway=runway)
+            print(f"\nMessage sent successfully!")
+            print(f"  Coord: {result['coord']}")
+            print(f"  Dropped into: {result['runway']}")
+            if msg.delivery_date:
+                print(f"  Queued for: {msg.delivery_date}")
+            else:
+                print("  Delivered immediately (sent folder)")
+            input("Press Enter to continue...")
 
     elif choice == "9":
         if not user.active_chains:
