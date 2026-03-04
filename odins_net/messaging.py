@@ -443,7 +443,86 @@ def show_inbox(user: UserState):
         body_preview = msg['body'][:60] + "..." if len(msg['body']) > 60 else msg['body']
         print(f"   {body_preview}")
 
+def read_board(user: UserState, eye: OdinsEye, board_name: str):
+    print(f"\n{BOLD}Board: {board_name}{RESET}")
+    print("-" * 60)
 
+    # Group messages by chain_id for thread view
+    threads = {}
+    for item in user.inbox:
+        msg = item["msg"]
+        chain_id = msg.get("chain_id", "no-chain")
+        seq = msg.get("seq", 0)
+        if chain_id not in threads:
+            threads[chain_id] = []
+        threads[chain_id].append((seq, msg))
+
+    if not threads:
+        print("No threads or messages on this board yet.")
+    else:
+        print("Threads / Chains:")
+        thread_list = sorted(threads.items(), key=lambda x: max(m[0] for m in x[1]), reverse=True)
+        for i, (chain_id, messages) in enumerate(thread_list, 1):
+            # Sort by seq
+            messages.sort(key=lambda x: x[0])
+            first_msg = messages[0][1]
+            flags = get_message_flags(first_msg)
+            print(f"  {i:2}. {flags} [{chain_id}] {first_msg['subject']} ({len(messages)} messages)")
+            print(f"     Latest: {messages[-1][1]['from']} ({messages[-1][1]['sent_date']})")
+
+    print("\nCommands:")
+    print("  [N]umber to read thread")
+    print("  [R]eply to thread (pick number)")
+    print("  [Q]uit board")
+    print("  [P]oll this board now")
+
+    sub_cmd = input("> ").strip().lower()
+
+    if sub_cmd.startswith("r "):
+        try:
+            thread_num = int(sub_cmd.split()[1]) - 1
+            chain_id, messages = thread_list[thread_num]
+            messages.sort(key=lambda x: x[0])
+            parent_msg = messages[-1][1]  # last message in chain
+            print(f"Replying to thread [{chain_id}] - {parent_msg['subject']}")
+            body = ""
+            print("Reply body (multi-line, end with empty line):")
+            while True:
+                line = input()
+                if not line and body:
+                    break
+                body += line + "\n"
+
+            next_seq = max(m[0] for m in messages) + 1
+            rng = BNSRNG(seed=chain_id)
+            predicted_offset = rng.advance_to(next_seq) * POLL_STEP_SIZE
+            logger.info(f"Chained prediction offset: {predicted_offset}")
+
+            reply_msg = Message(
+                sender=user.username,
+                recipient=parent_msg["from"],
+                subject=f"Re: {parent_msg['subject']}",
+                body=body,
+                mode=parent_msg.get("mode", "async"),
+                chain_id=chain_id,
+                seq=next_seq,
+            )
+
+            result = send_message(user, eye, reply_msg)
+            print(f"Reply sent! Coord: {result['coord']}")
+            print(f"Dropped into: {result['runway']}")
+        except:
+            print("Invalid thread number or no messages.")
+    elif sub_cmd == "p":
+        count = poll_inbox(user, eye, poller)
+        print(f"Board poll complete – {count} new messages")
+    elif sub_cmd == "q":
+        pass  # just exit
+    else:
+        print("Invalid command. Use R #, P, or Q.")
+
+    input("Press Enter to return to main menu...")
+    
 def start_polling(user: UserState, eye: OdinsEye):
     poller = create_default_poller()
     user.polling = True
