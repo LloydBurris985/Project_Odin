@@ -549,43 +549,133 @@ TIBBS Commands:
                 subject=subject,
                 body=body,
                 mode=mode,
-                delivery_date=delivery,
+while True:
+    print("\n" + "-" * 60)
+    print(f"{BOLD}TIBBS Main Menu{RESET}")
+    print("-" * 60)
+    print(f"User: {user.username}   Position: {user.runway_start}–{user.runway_start + user.runway_length}")
+    print(f"Last poll: {datetime.now().strftime('%Y-%m-%d %H:%M')}   Unread: {len(user.inbox)}")
+
+    print("\nBoards (runways):")
+    boards = [
+        ("1", "Odins-Hall", "Public hub & announcements", 10000, 10099),
+        ("2", "bubba-private", "Your personal mailbox & chains", user.runway_start, user.runway_start + user.runway_length),
+    ]
+    for num, name, desc, start, end in boards:
+        unread = " (NEW)" if name == "Odins-Hall" and len(user.inbox) > 0 else ""
+        print(f"  {num}. {name:<15} {desc} ({start}–{end}){unread}")
+
+    print("\nOther:")
+    print("  7. Poll Now")
+    print("  8. Compose / Post")
+    print("  9. Active Chains / Reply")
+    print(" 10. Queue (future delivery)")
+    print(" 11. Suspect / Flagged")
+    print(" 12. The Thing (disputes)")
+    print("  ?  Help")
+    print("  Q  Quit")
+
+    choice = input("\nEnter choice [1-12,?,Q]: ").strip().lower()
+
+    if choice in ["q", "quit"]:
+        user.polling = False
+        user.save()
+        print("Goodbye, traveler.")
+        break
+
+    elif choice in ["?", "help"]:
+        print("""
+TIBBS Commands:
+  1-6: Enter a board (poll & read threads)
+  7: Poll now
+  8: Compose new message/post
+  9: View active chains & reply
+ 10: View queued future messages
+ 11: View flagged suspect messages
+ 12: View active Things (disputes)
+  ?: Show this help
+  Q: Quit & save
+""")
+        input("Press Enter to continue...")
+
+    elif choice == "7":
+        count = poll_inbox(user, eye, poller)
+        print(f"Poll complete – {count} new messages found")
+        input("Press Enter to continue...")
+
+    elif choice == "8":
+        # Your compose code here (from earlier paste)
+        print("Compose mode – paste your version or say 'skip for now'")
+
+    elif choice == "9":
+        if not user.active_chains:
+            print("No active chains.")
+            input("Press Enter to continue...")
+            continue
+
+        print("\nActive Chains:")
+        chain_list = list(user.active_chains.items())
+        for i, (chain_id, seq) in enumerate(chain_list, 1):
+            print(f"  {i}. Chain {chain_id} – last seq {seq}")
+
+        pick = input("Pick chain number to reply (or Enter to skip): ").strip()
+        if not pick:
+            input("Press Enter to continue...")
+            continue
+
+        try:
+            idx = int(pick) - 1
+            chain_id, last_seq = chain_list[idx]
+            # Find last message in chain (placeholder - search inbox for match)
+            parent_msg = None
+            for item in user.inbox:
+                if item["msg"].get("chain_id") == chain_id and item["msg"].get("seq") == last_seq:
+                    parent_msg = item["msg"]
+                    break
+
+            if not parent_msg:
+                print("No parent message found for chain.")
+                input("Press Enter to continue...")
+                continue
+
+            print(f"Replying to chain {chain_id} (last seq {last_seq})")
+            print(f"Subject: Re: {parent_msg['subject']}")
+            body = ""
+            print("Reply body (multi-line, end with empty line):")
+            while True:
+                line = input()
+                if not line and body:
+                    break
+                body += line + "\n"
+
+            # Chain it
+            next_seq = last_seq + 1
+            rng = BNSRNG(seed=chain_id)
+            predicted_offset = rng.advance_to(next_seq) * POLL_STEP_SIZE
+            logger.info(f"Chained prediction offset: {predicted_offset}")
+
+            reply_msg = Message(
+                sender=user.username,
+                recipient=parent_msg["from"],
+                subject=f"Re: {parent_msg['subject']}",
+                body=body,
+                mode=parent_msg.get("mode", "async"),
+                chain_id=chain_id,
+                seq=next_seq,
             )
 
-            runway = None
-            if sub_choice == "1":
-                print("Available boards:")
-                for i, (num, name, _, _, _) in enumerate(boards, 1):
-                    print(f"  {i}. {name}")
-                board_num = input("Select board number or Enter for Odins Hall: ").strip()
-                if board_num:
-                    try:
-                        board_idx = int(board_num) - 1
-                        runway = Runway(boards[board_idx][3], boards[board_idx][4], name=boards[board_idx][1])
-                    except:
-                        print("Invalid – using Odins Hall")
-                runway = runway or get_odins_hall_runway()
-            else:
-                runway = None  # direct private
-
-            result = send_message(user, eye, msg, target_runway=runway)
-            print(f"Message sent! Coord: {result['coord']}")
+            result = send_message(user, eye, reply_msg)
+            print(f"Reply sent! Coord: {result['coord']}")
             print(f"Dropped into: {result['runway']}")
-            input("Press Enter to continue...")
+        except:
+            print("Invalid choice or chain not found.")
+        input("Press Enter to continue...")
 
-        elif choice in ["1", "2"]:
-            board_idx = int(choice) - 1
-            board_name = boards[board_idx][1]
-            
-        elif choice == "9":
-            if not user.active_chains:
-                print("No active chains.")
-            else:
-                print("\nActive Chains:")
-                for chain_id, seq in user.active_chains.items():
-                    print(f"  Chain {chain_id} – last seq {seq}")
-            input("Press Enter to continue...")           read_board(user, eye, board_name)
+    elif choice in ["1", "2"]:
+        board_idx = int(choice) - 1
+        board_name = boards[board_idx][1]
+        read_board(user, eye, board_name)
 
-        else:
-            print("Invalid choice. Type ? for help.")
-
+    else:
+        print("Invalid choice. Type ? for help.")
+        input("Press Enter to continue...")
