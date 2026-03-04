@@ -428,7 +428,7 @@ def get_dynamic_boards(user: UserState):
     # e.g. from a user.discovered_runways list
 
     return boards
-    
+
 def get_known_boards(user: UserState):
     # Start with fixed ones
     known = [
