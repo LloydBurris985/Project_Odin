@@ -727,10 +727,7 @@ elif choice == "8":
             print("Invalid choice or chain not found.")
         input("Press Enter to continue...")
 
-    elif choice in ["1", "2"]:
-        board_idx = int(choice) - 1
-        board_name = boards[board_idx][1]
-        read_board(user, eye, board_name)
+    
 
     else:
         print("Invalid choice. Type ? for help.")
