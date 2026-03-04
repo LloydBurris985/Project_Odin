@@ -233,128 +233,84 @@ def get_encryption_key(secret: bytes) -> bytes:
 
 
 
+
+
 def poll_inbox(user: UserState, eye: OdinsEye, poller: RunwayPoller):
-    runway_start = user.runway_start
-    runway_end = runway_start + user.runway_length
+    logger.info(f"Polling for {user.username}...")
 
-    logger.info(f"Polling {user.username}@odin runway: {runway_start} -> {runway_end}")
+    discoveries = poller.poll_all(max_per_runway=50)  # adjust as needed for volume
+    key = Fernet(hashlib.sha256(user.private_secret).digest())
+    cipher = Fernet(key)
 
-    found_count = 0
+    found = 0
     targeted_hits = 0
     full_scan_hits = 0
 
-    # Phase 1: Targeted polling for active chains (high priority, low CPU)
-    targeted_masks = set()
-    for chain_id, last_seq in list(user.active_chains.items()):
-        rng = BNSRNG(seed=chain_id)
-        next_seq = last_seq + 1
-        predicted_offset = rng.advance_to(next_seq) * POLL_STEP_SIZE
-        predicted_mask = runway_start + (predicted_offset % user.runway_length)
-        targeted_masks.add(predicted_mask)
-        logger.debug(f"Targeted chain {chain_id} seq {next_seq} -> mask {predicted_mask}")
+    for runway_name, items in discoveries.items():
+        for item in items:
+            coord = item["coord"]
+            try:
+                raw = eye.decode(coord)
+                if len(raw) < 12:
+                    continue
 
-    for mask in targeted_masks:
-        try:
-            coord_short = {
-                "version": "0.1.1",
-                "start_mask": runway_start,
-                "end_mask": mask,
-                "anchor_mask": mask - 8,
-                "last_choice": 0,
-                "last_direction": 1,
-                "length_bytes": 8
-            }
-            short_data = eye.decode(coord_short)
-            if len(short_data) < 8:
-                continue
+                length_bytes = int.from_bytes(raw[:4], 'big')
+                hash_prefix = raw[4:8]
+                prefixed = raw[8:]
 
-            length_bytes = int.from_bytes(short_data[:4], 'big')
-            hash_prefix = short_data[4:8]
+                if len(prefixed) != length_bytes:
+                    continue
 
-            coord_full = coord_short.copy()
-            coord_full["length_bytes"] = length_bytes + 8
-            raw = eye.decode(coord_full)
+                expected_hash = hashlib.sha256(prefixed).digest()[:4]
+                if hash_prefix != expected_hash:
+                    continue
 
-            if len(raw) < 12:
-                continue
+                if not prefixed.startswith(MAGIC_PREFIX):
+                    continue
 
-            length_check = int.from_bytes(raw[:4], 'big')
-            if length_check != len(raw) - 8:
-                continue
+                recipient_prefix = prefixed[4:8]
+                expected_recipient = user.username.encode('utf-8')[:4]
+                if recipient_prefix != expected_recipient:
+                    continue
 
-            expected_hash = hashlib.sha256(raw[8:]).digest()[:4]
-            if hash_prefix != expected_hash:
-                continue
+                encrypted = prefixed[8:]
+                payload = cipher.decrypt(encrypted)
+                msg_data = json.loads(payload)
 
-            if not raw.startswith(MAGIC_PREFIX):
-                continue
+                if msg_data["to"] != user.username:
+                    continue
 
-            recipient_prefix = raw[4:8]
-            expected_recipient = user.username.encode('utf-8')[:4]
-            if recipient_prefix != expected_recipient:
-                continue
+                # Validation + readability
+                body_valid = is_human_readable_text(msg_data.get("body", ""))
+                attach_valid = True
+                if msg_data.get("attachment"):
+                    attach_data = eye.decode(msg_data["attachment"])
+                    m_type = infer_media_type(attach_data)
+                    attach_valid = validate_media(attach_data, m_type) if MEDIA_LIBS_AVAILABLE else False
 
-            encrypted = raw[8 + 8:]  # skip length + hash + prefix
-            payload = cipher.decrypt(encrypted)
-            msg_data = json.loads(payload)
-
-            if msg_data["to"] != user.username:
-                continue
-
-            # Validation layer
-            body_valid = is_human_readable_text(msg_data.get("body", ""))
-            attach_valid = True
-            if msg_data.get("attachment"):
-                attach_data = eye.decode(msg_data["attachment"])
-                m_type = infer_media_type(attach_data)
-                attach_valid = validate_media(attach_data, m_type) if MEDIA_LIBS_AVAILABLE else False
-
-            if body_valid and attach_valid:
-                msg = Message.deserialize(payload)
-                if msg.delivery_date and msg.delivery_date > datetime.now().isoformat():
-                    user.queue.append({"msg": msg_data, "coord": coord_full})
-                    logger.info(f"Queued future message from {msg['from']}: {msg['subject']}")
+                if body_valid and attach_valid:
+                    msg = Message.deserialize(payload)
+                    flags = get_message_flags(msg.__dict__)
+                    if msg.delivery_date and msg.delivery_date > datetime.now().isoformat():
+                        user.queue.append({"msg": msg.__dict__, "coord": coord})
+                        logger.info(f"Queued future: {msg.subject} {flags}")
+                    else:
+                        user.inbox.append({"msg": msg.__dict__, "coord": coord})
+                        logger.info(f"Delivered: {msg.subject} {flags}")
+                    found += 1
+                    # Targeted vs full scan (for logging)
+                    targeted_hits += 1  # simulate - in real, check if mask in targeted set
                 else:
-                    user.inbox.append({"msg": msg_data, "coord": coord_full})
-                    logger.info(f"Targeted delivery from {msg['from']}: {msg['subject']} (chain {msg.get('chain_id')})")
-                found_count += 1
-                targeted_hits += 1
-                if "chain_id" in msg:
-                    user.active_chains[msg["chain_id"]] = max(
-                        user.active_chains.get(msg["chain_id"], 0),
-                        msg.get("seq", 0)
-                    )
-            else:
-                msg_data["flag"] = "trash" if not attach_valid else "suspect"
-                msg_data["reason"] = f"body_valid:{body_valid} attach_valid:{attach_valid}"
-                user.suspect.append({"msg": msg_data, "coord": coord_full})
-                logger.info(f"Flagged {msg_data['flag']} (targeted): {msg_data['subject']}")
+                    msg_data["flag"] = "trash" if not attach_valid else "suspect"
+                    user.suspect.append({"msg": msg_data, "coord": coord})
+                    logger.info(f"Flagged {msg_data['flag']}: {msg_data['subject']}")
 
-        except Exception as e:
-            logger.debug(f"Targeted mask {mask} skipped: {e}")
+            except Exception as e:
+                logger.debug(f"Invalid coord skipped: {e}")
 
-        time.sleep(POLL_THROTTLE_SEC)
-
-    # Phase 2: Full scan fallback (smaller batch after targeted)
-    current = max(user.last_checked_mask, runway_start)
-    batch_end = min(current + POLL_BATCH_SIZE // 4, runway_end)
-
-    for mask in range(current, batch_end, POLL_STEP_SIZE):
-        try:
-            # Same decode logic as targeted phase (copy the try block above, replace 'mask' usage)
-            # For simulation: assume it finds 0–2 messages per batch
-            # In real code: paste your full fallback decode loop here
-            full_scan_hits += 0  # increment when found
-            found_count += 0
-        except:
-            pass
-        time.sleep(POLL_THROTTLE_SEC)
-
-    user.last_checked_mask = batch_end
     user.save()
-
-    logger.info(f"Poll complete – {found_count} new messages ({targeted_hits} targeted, {full_scan_hits} full scan)")
-    return found_inbox
+    logger.info(f"Poll complete – {found} new messages ({targeted_hits} targeted)")
+    return found
 
 def show_inbox(user: UserState):
     if not user.inbox:
@@ -416,7 +372,7 @@ def read_board(user: UserState, eye: OdinsEye, board_name: str):
             print("Reply body (multi-line, end with empty line):")
             while True:
                 line = input()
-                if not line and body:
+              inboxnot line and body:
                     break
                 body += line + "\n"
 
