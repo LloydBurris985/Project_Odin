@@ -408,7 +408,32 @@ def read_board(user: UserState, eye: OdinsEye, board_name: str):
         print("Invalid command. Use R #, P, or Q.")
 
     input("Press Enter to return to main menu...")
+    
+def get_dynamic_boards(user: UserState):
+    boards = []
 
+    # Fixed public boards
+    boards.append(("1", "Odins-Hall", "Public hub & announcements", 10000, 10099))
+
+    # User's private runway
+    boards.append(("2", f"{user.username}-private", "Personal mailbox & chains", 
+                   user.runway_start, user.runway_start + user.runway_length))
+
+    # Auto-generate boards for active chains
+    chain_boards = []
+    for chain_id in sorted(user.active_chains.keys()):
+        seq = user.active_chains[chain_id]
+        chain_name = f"Chain-{chain_id[:8]}"
+        chain_boards.append((str(len(boards) + len(chain_boards) + 1), chain_name, 
+                             f"Active conversation thread (last seq {seq})", 0, 0))  # placeholder range
+
+    boards.extend(chain_boards)
+
+    # Future: add discovered runways from poll results or local file
+    # e.g. from a user.discovered_runways list
+
+    return boards
+    
 def get_known_boards(user: UserState):
     # Start with fixed ones
     known = [
