@@ -446,9 +446,6 @@ def read_board(user: UserState, eye: OdinsEye, board_name: str):
         input("Press Enter to continue...")
     
 def get_dynamic_boards(user: UserState):
-    boards = []
-
-    # All possible boards (fixed + private + chains)
     all_boards = []
 
     # Fixed public
@@ -459,7 +456,7 @@ def get_dynamic_boards(user: UserState):
     all_boards.append((private_name, "Personal mailbox & chains", 
                        user.runway_start, user.runway_start + user.runway_length))
 
-    # Chains
+    # Active chains
     for chain_id in sorted(user.active_chains.keys()):
         seq = user.active_chains[chain_id]
         chain_name = f"Chain-{chain_id[:8]}"
