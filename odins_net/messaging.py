@@ -752,6 +752,42 @@ TIBBS Commands:
         elif choice == "11":
             if not user.suspect:
                 print("No flagged messages.")
+                        elif choice == "s":
+            boards = get_dynamic_boards(user)
+            print("\nSubscribe to a board:")
+            for num, name, desc, _, _ in boards[:-1]:  # exclude "All Boards"
+                print(f"  {num}. {name} ({desc})")
+            pick = input("Enter number to subscribe (or A for All): ").strip().upper()
+            if pick == "A":
+                for _, name, _, _, _ in boards[:-1]:
+                    user.subscribe_board(name)
+                print("Subscribed to all available boards.")
+            elif pick.isdigit():
+                idx = int(pick) - 1
+                if 0 <= idx < len(boards) - 1:
+                    board_name = boards[idx][1]
+                    user.subscribe_board(board_name)
+                    print(f"Subscribed to {board_name}")
+                else:
+                    print("Invalid number.")
+            input("Press Enter to continue...")
+
+        elif choice == "u":
+            boards = get_dynamic_boards(user)
+            print("\nUnsubscribe from a board:")
+            subscribed_names = [b[1] for b in boards[:-1]]
+            for i, name in enumerate(subscribed_names, 1):
+                print(f"  {i}. {name}")
+            pick = input("Enter number to unsubscribe: ").strip()
+            if pick.isdigit():
+                idx = int(pick) - 1
+                if 0 <= idx < len(subscribed_names):
+                    board_name = subscribed_names[idx]
+                    user.unsubscribe_board(board_name)
+                    print(f"Unsubscribed from {board_name}")
+                else:
+                    print("Invalid number.")
+            input("Press Enter to continue...")
             else:
                 for i, item in enumerate(user.suspect, 1):
                     m = item["msg"]
