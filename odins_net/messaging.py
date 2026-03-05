@@ -621,6 +621,30 @@ TIBBS Commands:
             print("Active chains / reply – coming soon")
             input("Press Enter...")
 
+        elif choice == "10":
+            if not user.queue:
+                print("Queue is empty.")
+            else:
+                print("\nQueued future messages:")
+                for i, item in enumerate(user.queue, 1):
+                    m = item["msg"]
+                    print(f"  {i}. {m['subject']} to {m['recipient']} (deliver: {m['delivery_date']})")
+            input("Press Enter...")
+
+        elif choice == "11":
+            if not user.suspect:
+                print("No flagged messages.")
+            else:
+                print("\nSuspect / Flagged:")
+                for i, item in enumerate(user.suspect, 1):
+                    m = item["msg"]
+                    print(f"  {i}. [FLAGGED {m.get('flag','?')}] {m['subject']} from {m['from']}")
+            input("Press Enter...")
+
+        elif choice == "12":
+            print("The Thing (disputes) – coming soon")
+            input("Press Enter...")
+
         elif choice.isdigit():
             try:
                 idx = int(choice) - 1
