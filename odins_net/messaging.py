@@ -692,4 +692,149 @@ elif choice == "8":
         print(f"User: {user.username}   Position: {user.runway_start}–{user.runway_start + user.runway_length}")
         print(f"Last poll: {datetime.now().strftime('%Y-%m-%d %H:%M')}   Unread: {len(user.inbox)}")
         print(f"Total boards available: {len(boards)}")
+        
+ if __name__ == "__main__":
+    user = UserState.load()
+    eye = OdinsEye()
+    poller = create_default_poller()
 
+    print(BANNER)
+    print(f"{GREEN}{BOLD}Welcome to the Temporal Intergalactic BBS{RESET}")
+    print(f"Logged in as: {user.username}")
+    print(f"Runway: {user.runway_start}–{user.runway_start + user.runway_length}")
+    print("Type ? for help at any prompt | Q to quit\n")
+
+    start_polling(user, eye)
+
+    while True:
+        print("\n" + "-" * 60)
+        print(f"{BOLD}TIBBS Main Menu{RESET}")
+        print("-" * 60)
+        print(f"User: {user.username}   Position: {user.runway_start}–{user.runway_start + user.runway_length}")
+        print(f"Last poll: {datetime.now().strftime('%Y-%m-%d %H:%M')}   Unread: {len(user.inbox)}")
+
+        boards = get_dynamic_boards(user)
+        print("\nBoards (runways):")
+        for num, name, desc, start, end in boards:
+            unread = " (NEW)" if name == "Odins-Hall" and len(user.inbox) > 0 else ""
+            print(f"  {num}. {name:<15} {desc} ({start}–{end}){unread}")
+
+        print("\nOther:")
+        print("  7. Poll Now")
+        print("  8. Compose / Post")
+        print("  9. Active Chains / Reply")
+        print(" 10. Queue (future delivery)")
+        print(" 11. Suspect / Flagged")
+        print(" 12. The Thing (disputes)")
+        print("  S  Subscribe to boards")
+        print("  U  Unsubscribe from boards")
+        print("  ?  Help")
+        print("  Q  Quit")
+
+        choice = input("\nEnter choice [1-12,S,U,?,Q]: ").strip().lower()
+
+        if choice in ["q", "quit"]:
+            user.polling = False
+            user.save()
+            print("Goodbye, traveler.")
+            break
+
+        elif choice in ["?", "help"]:
+            print("""
+TIBBS Commands:
+  1+: Enter board (dynamic numbers)
+  7: Poll now
+  8: Compose new message/video
+  9: Active chains & reply
+ 10: Queue
+ 11: Suspect
+ 12: The Thing
+  S: Subscribe
+  U: Unsubscribe
+  ?: Help
+  Q: Quit
+""")
+            input("Press Enter...")
+
+        elif choice == "7":
+            count = poll_inbox(user, eye, poller)
+            print(f"Poll complete – {count} new messages")
+            input("Press Enter...")
+
+        elif choice == "8":
+            # Polished compose (text + video stub)
+            print("\nCompose / Post")
+            print("1. Text post")
+            print("2. Video chunk")
+            print("3. Private")
+            sub = input("Choose [1/2/3]: ").strip() or "1"
+
+            to = input("To (blank for public): ").strip()
+            subject = input("Subject: ").strip()
+
+            body = ""
+            if sub == "2":
+                path = input("Video path: ").strip()
+                if path:
+                    body = "[VIDEO CHAIN - chunks queued]"
+                    print("Chunking simulated...")
+                else:
+                    sub = "1"
+            else:
+                print("Body (end with empty line):")
+                lines = []
+                while True:
+                    line = input()
+                    if not line and lines:
+                        break
+                    lines.append(line)
+                body = "\n".join(lines)
+
+            mode = input("Mode [async]: ").strip() or "async"
+            delivery = input("Delivery date or empty: ").strip() or None
+
+            msg = Message(user.username, to or "public", subject, body, mode, delivery)
+
+            runway = None
+            if sub in ["1", "2"]:
+                print("\nBoards:")
+                for n, nm, d, s, e in boards:
+                    print(f"  {n}. {nm}")
+                pick = input("Board # or Enter for Odins-Hall: ").strip()
+                if pick.isdigit():
+                    idx = int(pick) - 1
+                    runway = Runway(boards[idx][3], boards[idx][4], boards[idx][1])
+                else:
+                    runway = get_odins_hall_runway()
+
+            result = send_message(user, eye, msg, runway)
+            print(f"Sent! Coord: {result['coord']}")
+            input("Press Enter...")
+
+        elif choice == "9":
+            print("Active chains / reply – coming soon")
+            input("Press Enter...")
+
+        elif choice.isdigit():
+            try:
+                idx = int(choice) - 1
+                if 0 <= idx < len(boards):
+                    name = boards[idx][1]
+                    read_board(user, eye, name)
+                else:
+                    print("Invalid board number")
+            except:
+                print("Error entering board")
+            input("Press Enter...")
+
+        elif choice.upper() == "S":
+            print("Subscribe – coming soon")
+            input("Press Enter...")
+
+        elif choice.upper() == "U":
+            print("Unsubscribe – coming soon")
+            input("Press Enter...")
+
+        else:
+            print("Invalid choice. Type ? for help.")
+            input("Press Enter...")       
