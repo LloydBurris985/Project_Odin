@@ -107,6 +107,18 @@ class UserState:
         logger.info(f"State saved for {self.username}")
 
     @classmethod
+    
+    def subscribe_board(self, board_name: str):
+        self.subscribed_boards.add(board_name)
+        self.save()
+        logger.info(f"Subscribed to board: {board_name}")
+
+    def unsubscribe_board(self, board_name: str):
+        if board_name in self.subscribed_boards:
+            self.subscribed_boards.remove(board_name)
+            self.save()
+            logger.info(f"Unsubscribed from board: {board_name}")
+            
     def load(cls, path: str = "odin_state.json") -> "UserState":
         try:
             with open(path) as f:
