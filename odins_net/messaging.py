@@ -447,28 +447,36 @@ def read_board(user: UserState, eye: OdinsEye, board_name: str):
 def get_dynamic_boards(user: UserState):
     boards = []
 
-    # Fixed public boards
-    boards.append(("1", "Odins-Hall", "Public hub & announcements", 10000, 10099))
+    # All possible boards (fixed + private + chains)
+    all_boards = []
 
-    # User's private runway
-    boards.append(("2", f"{user.username}-private", "Personal mailbox & chains", 
-                   user.runway_start, user.runway_start + user.runway_length))
+    # Fixed public
+    all_boards.append(("Odins-Hall", "Public hub & announcements", 10000, 10099))
 
-    # Auto-generate boards for active chains
-    chain_boards = []
+    # Private
+    private_name = f"{user.username}-private"
+    all_boards.append((private_name, "Personal mailbox & chains", 
+                       user.runway_start, user.runway_start + user.runway_length))
+
+    # Chains
     for chain_id in sorted(user.active_chains.keys()):
         seq = user.active_chains[chain_id]
         chain_name = f"Chain-{chain_id[:8]}"
-        chain_boards.append((str(len(boards) + len(chain_boards) + 1), chain_name, 
-                             f"Active conversation thread (last seq {seq})", 0, 0))  # placeholder range
+        all_boards.append((chain_name, f"Active conversation thread (last seq {seq})", 0, 0))
 
-    boards.extend(chain_boards)
+    # Filter to subscribed only
+    subscribed = []
+    counter = 1
+    for name, desc, start, end in all_boards:
+        if name in user.subscribed_boards:
+            subscribed.append((str(counter), name, desc, start, end))
+            counter += 1
 
-    # Future: add discovered runways from poll results or local file
-    # e.g. from a user.discovered_runways list
+    # Add "All Boards" option at end
+    subscribed.append(("A", "All Boards", "Show every known board/runway", 0, 0))
 
-    return boards
-
+    return subscribed
+    
 def get_known_boards(user: UserState):
     # Start with fixed ones
     known = [
