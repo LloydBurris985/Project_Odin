@@ -693,6 +693,7 @@ elif choice == "8":
         print("-" * 60)
         print(f"User: {user.username}   Position: {user.runway_start}–{user.runway_start + user.runway_length}")
         print(f"Last poll: {datetime.now().strftime('%Y-%m-%d %H:%M')}   Unread: {len(user.inbox)}")
+        print(f"Total boards available: {len(boards)}")
 
         print("\nBoards (runways):")
         boards = get_dynamic_boards(user)
