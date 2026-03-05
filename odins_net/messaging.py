@@ -84,6 +84,7 @@ class UserState:
         self.active_chains: Dict[str, int] = {}
         self.last_checked_mask = self.runway_start
         self.polling = False
+        self.subscribed_boards = set(["Odins-Hall", f"{username}-private"])  # default subscriptions
 
     def _compute_runway_start(self) -> int:
         h = hashlib.sha256(self.private_secret + self.username.encode()).digest()
