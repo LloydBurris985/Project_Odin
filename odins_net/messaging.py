@@ -317,6 +317,8 @@ def show_inbox(user: UserState):
         print(f"   {body_preview}")
 
 def read_board(user: UserState, eye: OdinsEye, board_name: str):
+    PAGE_SIZE = 20  # threads or messages per page
+
     print(f"\n{BOLD}Board: {board_name}{RESET}")
     print("-" * 60)
 
@@ -332,77 +334,102 @@ def read_board(user: UserState, eye: OdinsEye, board_name: str):
 
     if not threads:
         print("No threads or messages on this board yet.")
-    else:
-        print("Threads / Chains:")
-        thread_list = sorted(threads.items(), key=lambda x: max(m[0] for m in x[1]), reverse=True)
-        for i, (chain_id, messages) in enumerate(thread_list, 1):
+        input("Press Enter to continue...")
+        return
+
+    # Sort threads by latest message seq
+    thread_list = sorted(threads.items(), key=lambda x: max(m[0] for m in x[1]), reverse=True)
+
+    page = 0
+    total_pages = (len(thread_list) // PAGE_SIZE) + (1 if len(thread_list) % PAGE_SIZE else 0)
+
+    while True:
+        start = page * PAGE_SIZE
+        end = start + PAGE_SIZE
+        page_threads = thread_list[start:end]
+
+        if not page_threads:
+            print("End of threads.")
+            break
+
+        print(f"\nThreads (page {page+1} of {total_pages}):")
+        for i, (chain_id, messages) in enumerate(page_threads, start + 1):
             messages.sort(key=lambda x: x[0])
             first_msg = messages[0][1]
             flags = get_message_flags(first_msg)
             print(f"  {i:2}. {flags} [{chain_id}] {first_msg['subject']} ({len(messages)} messages)")
-            print(f"     Started by {first_msg['from']} ({first_msg['sent_date']})")
             print(f"     Latest: {messages[-1][1]['from']} ({messages[-1][1]['sent_date']})")
 
-    print("\nCommands:")
-    print("  [N]umber to read thread")
-    print("  [R]eply to thread (pick number)")
-    print("  [P]oll this board now")
-    print("  [Q]uit board")
+        print("\nCommands:")
+        print("  [N]umber to read thread")
+        print("  [R]eply to thread (pick number)")
+        print("  [N]ext / [P]revious page")
+        print("  [P]oll this board")
+        print("  [Q]uit board")
 
-    sub_cmd = input("> ").strip().lower()
+        sub_cmd = input("> ").strip().lower()
 
-    if sub_cmd.startswith("r "):
-        try:
-            thread_num = int(sub_cmd.split()[1]) - 1
-            chain_id, messages = thread_list[thread_num]
-            messages.sort(key=lambda x: x[0])
-            parent_msg = messages[-1][1]  # last in chain
-            parent_coord = messages[-1][2]
+        if sub_cmd in ["n", "next"]:
+            page += 1
+            if page >= total_pages:
+                page = total_pages - 1
+            continue
+        elif sub_cmd in ["p", "previous"]:
+            page = max(0, page - 1)
+            continue
+        elif sub_cmd == "q":
+            break
+        elif sub_cmd.startswith("r "):
+            try:
+                thread_num = int(sub_cmd.split()[1]) - 1
+                real_idx = start + thread_num
+                chain_id, messages = thread_list[real_idx]
+                messages.sort(key=lambda x: x[0])
+                parent_msg = messages[-1][1]
+                parent_coord = messages[-1][2]
 
-            print(f"Replying to thread [{chain_id}] - {parent_msg['subject']}")
-            print(f"From: {parent_msg['from']} ({parent_msg['sent_date']})")
-            print(f"Body preview: {parent_msg['body'][:100]}{'...' if len(parent_msg['body']) > 100 else ''}")
-            print(f"Mode: {parent_msg.get('mode', 'async')} | Status: {parent_msg.get('status', 'sent')}")
-            print(f"From: {parent_msg['from']} ({parent_msg['sent_date']})")
-            print(f"Body preview: {parent_msg['body'][:100]}...")
+                print(f"Replying to thread [{chain_id}] - {parent_msg['subject']}")
+                print(f"From: {parent_msg['from']} ({parent_msg['sent_date']})")
+                print(f"Body preview: {parent_msg['body'][:100]}{'...' if len(parent_msg['body']) > 100 else ''}")
 
-            body = ""
-            print("Reply body (multi-line, end with empty line):")
-            while True:
-                line = input()
-                if not line and body:
-                    break
-                body += line + "\n"
+                body = ""
+                print("Reply body (multi-line, end with empty line):")
+                while True:
+                    line = input()
+                    if not line and body:
+                        break
+                    body += line + "\n"
 
-            next_seq = max(m[0] for m in messages) + 1
-            rng = BNSRNG(seed=chain_id)
-            predicted_offset = rng.advance_to(next_seq) * POLL_STEP_SIZE
-            logger.info(f"Chained prediction offset for {chain_id}: {predicted_offset}")
+                next_seq = max(m[0] for m in messages) + 1
+                rng = BNSRNG(seed=chain_id)
+                predicted_offset = rng.advance_to(next_seq) * POLL_STEP_SIZE
+                logger.info(f"Chained prediction offset for {chain_id}: {predicted_offset}")
 
-            reply_msg = Message(
-                sender=user.username,
-                recipient=parent_msg["from"],
-                subject=f"Re: {parent_msg['subject']}",
-                body=body,
-                mode=parent_msg.get("mode", "async"),
-                chain_id=chain_id,
-                seq=next_seq,
-            )
+                reply_msg = Message(
+                    sender=user.username,
+                    recipient=parent_msg["from"],
+                    subject=f"Re: {parent_msg['subject']}",
+                    body=body,
+                    mode=parent_msg.get("mode", "async"),
+                    chain_id=chain_id,
+                    seq=next_seq,
+                )
 
-            result = send_message(user, eye, reply_msg)
-            print(f"Reply sent! Coord: {result['coord']}")
-            print(f"Dropped into: {result['runway']}")
-        except Exception as e:
-            print(f"Error: {e}")
-    elif sub_cmd == "p":
-        count = poll_inbox(user, eye, poller)
-        print(f"Board poll complete – {count} new messages")
-    elif sub_cmd == "q":
-        pass
-    else:
-        print("Invalid command. Use R #, P, or Q.")
+                result = send_message(user, eye, reply_msg)
+                print(f"Reply sent! Coord: {result['coord']}")
+                print(f"Dropped into: {result['runway']}")
+            except Exception as e:
+                print(f"Error: {e}")
+        elif sub_cmd == "p" and "poll" in sub_cmd.lower():
+            count = poll_inbox(user, eye, poller)
+            print(f"Board poll complete – {count} new messages")
+        elif sub_cmd.isdigit():
+            # Future: read single thread full
+            print("Full thread reading – coming soon")
+        else:
+            print("Invalid command. Use R #, N, P, Q, or poll")
 
-    input("Press Enter to return to main menu...")
+        input("Press Enter to continue...")
     
 def get_dynamic_boards(user: UserState):
     boards = []
