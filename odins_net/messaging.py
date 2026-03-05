@@ -645,6 +645,57 @@ TIBBS Commands:
             print("The Thing (disputes) – coming soon")
             input("Press Enter...")
 
+        elif choice.upper() == "S":
+            boards = get_dynamic_boards(user)
+            print("\n" + "="*50)
+            print(f"{BOLD}Subscribe to Boards{RESET}")
+            print("="*50)
+            print("Currently subscribed: {len(user.subscribed_boards)}")
+            print("Available boards:")
+            for num, name, desc, _, _ in boards[:-1]:  # exclude "All Boards"
+                status = " (subscribed)" if name in user.subscribed_boards else ""
+                print(f"  {num}. {name}{status} ({desc})")
+            pick = input("\nNumber to subscribe, A for All, or Enter to cancel: ").strip().upper()
+            if pick == "A":
+                for _, name, _, _, _ in boards[:-1]:
+                    user.subscribe_board(name)
+                print("Subscribed to all boards.")
+            elif pick.isdigit():
+                idx = int(pick) - 1
+                if 0 <= idx < len(boards) - 1:
+                    board_name = boards[idx][1]
+                    if board_name in user.subscribed_boards:
+                        print(f"Already subscribed to {board_name}.")
+                    else:
+                        user.subscribe_board(board_name)
+                        print(f"Subscribed to {board_name}")
+                else:
+                    print("Invalid number.")
+            input("Press Enter to return...")
+
+        elif choice.upper() == "U":
+            boards = get_dynamic_boards(user)
+            print("\n" + "="*50)
+            print(f"{BOLD}Unsubscribe from Boards{RESET}")
+            print("="*50)
+            print("Currently subscribed: {len(user.subscribed_boards)}")
+            subscribed_list = [b for b in boards[:-1] if b[1] in user.subscribed_boards]
+            if not subscribed_list:
+                print("No subscriptions to unsubscribe from.")
+            else:
+                for i, (_, name, desc, _, _) in enumerate(subscribed_list, 1):
+                    print(f"  {i}. {name} ({desc})")
+                pick = input("\nNumber to unsubscribe, or Enter to cancel: ").strip()
+                if pick.isdigit():
+                    idx = int(pick) - 1
+                    if 0 <= idx < len(subscribed_list):
+                        board_name = subscribed_list[idx][1]
+                        user.unsubscribe_board(board_name)
+                        print(f"Unsubscribed from {board_name}")
+                    else:
+                        print("Invalid number.")
+            input("Press Enter to return...")
+
         elif choice.isdigit():
             try:
                 idx = int(choice) - 1
@@ -655,14 +706,6 @@ TIBBS Commands:
                     print("Invalid board number")
             except:
                 print("Error entering board")
-            input("Press Enter...")
-
-        elif choice.upper() == "S":
-            print("Subscribe – coming soon")
-            input("Press Enter...")
-
-        elif choice.upper() == "U":
-            print("Unsubscribe – coming soon")
             input("Press Enter...")
 
         else:
