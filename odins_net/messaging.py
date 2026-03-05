@@ -72,6 +72,7 @@ def get_message_flags(msg_data: Dict) -> str:
 
 class UserState:
     def __init__(self, username: str):
+        self.subscribed_boards = set(["Odins-Hall", f"{username}-private"])  # default subs
         self.username = username
         self.private_secret = secrets.token_bytes(32)
         self.runway_start = self._compute_runway_start()
