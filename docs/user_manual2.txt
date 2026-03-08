@@ -1,0 +1,8 @@
+2. Install dependencies:
+(If moviepy/pydub complain, install ffmpeg: `sudo apt install ffmpeg` on Linux, or equivalent)
+3. Run:
+
+First time: It asks for a username (e.g. bubba). Type it and press Enter.
+
+## Quick Start Guide
+Once running, you see the main menu:
