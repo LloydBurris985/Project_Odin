@@ -1,0 +1,19 @@
+# Project Odin – Odins Net v0.1-alpha User Manual
+**Temporal Intergalactic BBS**  
+"The lattice is eternal. All information already exists."
+
+## What is this?
+A prototype messaging system that lets you send text (and simulated video chunks) across time.  
+- Messages can arrive in the future or from the past  
+- Threads chain automatically  
+- Boards grow dynamically from conversations  
+- Subscribe/unsubscribe to keep your menu clean  
+
+It's like Usenet meets email meets time travel — built on a lattice where all data already exists.
+
+## Requirements
+- Python 3.10+ (3.12 recommended)  
+- pip install: cryptography pillow moviepy pydub (optional for video)  
+
+## How to Run (CLI Version)
+1. Download/clone the repo:
