@@ -1,0 +1,48 @@
+User Manual - Project Odin v0.1-alpha
+How to Install, Run, and Use Odins Net
+
+1. Requirements
+- Python 3.10+ (3.12 recommended)
+- Install dependencies:
+  pip install cryptography pillow moviepy pydub
+- Optional: ffmpeg for video (sudo apt install ffmpeg on Linux)
+
+2. Download the Project
+git clone https://github.com/LloydBurris985/Project_Odin.git
+cd Project_Odin/odins_net
+
+3. Run the BBS (messaging.py)
+python messaging.py   (or python3 messaging.py on Linux)
+
+First time:
+- It asks for username (e.g. bubba) → type it and press Enter
+- You get the banner + main menu
+
+Main Menu Commands:
+1, 2, 3...   Enter board (dynamic numbers)
+7            Poll Now (check for new messages)
+8            Compose / Post (text or video chunk simulation)
+9            Active Chains / Reply (coming soon)
+10           Queue (future delivery messages)
+11           Suspect / Flagged
+12           The Thing (disputes) (coming soon)
+S            Subscribe to boards (curate your menu)
+U            Unsubscribe from boards
+?            Help
+Q            Quit (saves state to odin_state.json)
+
+How to Use:
+- Poll: Type 7 → messages appear in inbox with flags ([UNSEC], [FUTURE], [PAST])
+- Compose: Type 8 → choose 1 (text) or 2 (video sim) → enter recipient/subject/body/path → send → see coord
+- Boards: Type 1 → see threads with Re: prefixes and arrow replies
+- Reply: In board view, type R 1 → reply to thread 1 → chains automatically
+- Subscribe: Type S → pick boards → menu shows only subscribed
+- Future messages: Set delivery date → they queue → appear on poll after date
+
+Troubleshooting:
+- IndentationError: Mixed spaces/tabs — re-type bad line with 4 spaces (no tabs)
+- ModuleNotFoundError: Make sure you're in odins_net folder (cd odins_net)
+- No odin_state.json: Normal first run — enter username
+- Video not working: Install ffmpeg and moviepy/pydub deps
+
+Enjoy the lattice — it's eternal.
