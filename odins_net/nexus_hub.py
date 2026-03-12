@@ -3,7 +3,8 @@
 # Every Odins Net node should poll this occasionally for discovery
 
 from typing import List, Optional
-from .runway import Runway, RunwayPoller
+from .runway import Runway
+from .runwaypoller import RunwayPoller
 from .core import OdinsEye
 
 
