@@ -15,7 +15,8 @@ from io import BytesIO
 
 from .core import OdinsEye
 from .rng import BNSRNG
-from .runway import Runway, RunwayPoller
+from .runway import Runway
+from .runwaypoller import RunwayPoller
 from .nexus_hub import get_odins_hall_runway, create_default_poller
 from cryptography.fernet import Fernet
 
