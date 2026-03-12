@@ -2,7 +2,7 @@ from typing import Optional, List, Any
 import threading
 import queue
 import time
-
+from .runway import Runway
 
 class RunwayPoller:
     """
