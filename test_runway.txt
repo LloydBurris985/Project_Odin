@@ -1,0 +1,2 @@
+echo "register Runway_42 TemporalMailbox 10000 10000 Received_Traffic Sent_traffic mailbox_command.txt --text" >> command.txt
+echo "register Runway_42 TemporalMailbox 10000 10000 Received_Traffic Sent_traffic mailbox_command.txt --text" >> mailbox_command.txt
