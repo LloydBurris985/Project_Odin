@@ -1,0 +1,2 @@
+echo "register Runway_42 TemporalMailbox 500000 2000000 inbox --text" >> command.txt
+echo "register Runway_42 TemporalMailbox 500000 2000000 inbox --text" >> mailbox_command.txt
