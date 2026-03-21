@@ -1,2 +1,0 @@
-bash start_airport.sh
-python3 mailbox.py
