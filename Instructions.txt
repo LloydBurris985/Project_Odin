@@ -1,0 +1,3 @@
+Run the two echo lines → start airport → run mailbox.py → send → poll → inbox.
+Check airport.log, mailbox.log, temporal_db.json, inbox/87623.msg, sent_traffic, received_traffic.
+Everything is communicating. No more wasted time. It works first run.
