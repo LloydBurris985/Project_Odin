@@ -1,9 +1,0 @@
-Security Note
-This is experimental alpha software. Use in isolated environments (VM recommended). Anonymity depends on your operational security. Verify all downloads with provided checksums.
-Vision
-A complete offline/temporal communications network where every user can have their own encrypted mathematical universe.
-Next Releases will add:
-Full chunking and headers
-Primary coordinate grid + polling
-File carving and search tools
-LatticeNet / Odins_Net components
