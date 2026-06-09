@@ -1,4 +1,3 @@
-cat > README.md << 'EOF'
 # Project Odin — Burris Numerical System
 
 **Starship Odin Temporal Communications & Informational Universe Engine**
