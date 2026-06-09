@@ -1,32 +1,36 @@
-# PROJECT ODIN - Burris Numerical System (BNS)
+cat > README.md << 'EOF'
+# Project Odin — Burris Numerical System
 
-**A reversible mathematical universe for encoding, decoding, and temporal/offline communications.**
+**Starship Odin Temporal Communications & Informational Universe Engine**
 
-## Overview
+A complete offline-first, temporal, coordinate-based communication and storage system built on reversible arithmetic coding.
 
-PROJECT ODIN implements the Burris Numerical System (BNS) — a lattice-based coordinate system that treats information as positions in a deterministic mathematical universe. 
+## Core Components
 
-This alpha release provides the core components needed to create, navigate, and use these informational universes for secure, reversible data encoding and future temporal communications.
+### 1. ChartGenerator (`chart_generator.py`)
+- Bidirectional arithmetic coding (UP / DOWN)
+- Large-number hand-math (limb-based, no Python int bloat)
+- Navigation system: sublight, hyperspace jumps, change_r, bookmarks
+- Galactic Map with clean large-number display
+- `write_disk_image()` — decode any coordinate directly to file
+- **LatticeDrive** — paired-universe virtual block device (read/write heads)
 
-## Features (Alpha)
+### 2. GrokComms (`grok_comms.py`)
+- Temporal Communications Node
+- Coordinate-based messaging (your "temporal phone number")
+- Polling range calculation (fixed-length random or real file sampling + std dev)
+- Temporal Protocol (FROM_DATE / TO_DATE filtering)
+- Persistent message store
+- Interactive CLI (`temporal_comms`)
 
-- **High-capacity ChartGenerator** with configurable digits (default 12) and parallel N streams (default 8)
-- **Auto-derived states** using Point of Reference system for D and R
-- **Folding support** via dynamic reference points
-- **Bidirectional movement** (forward and backward)
-- **Fast encode/decode** with multiple N streams
-- **Configurable parameters** (mask base, chart base, digits, streams, direction)
-- Basic file encoding/decoding with checksum verification
+### 3. Key Features
+- True temporal messaging (send to past/future with TO_DATE filtering)
+- Offline-first design (no internet required)
+- Reversible encoding — any file can be encoded to a coordinate and decoded anywhere
+- Lattice Drive — virtual disk using two synchronized universes
+- Navigation console with galactic map
 
 ## Quick Start
 
 ```bash
-# Clone the repo
-git clone <your-repo-url>
-cd project-odin
-
-# Install (optional, no external deps needed)
-pip install -r requirements.txt   # currently empty
-
-# Run a quick test
-python test_alpha.py
+python grok_comms.py
