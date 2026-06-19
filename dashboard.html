@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>OdinNet Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    /* ── Token system ────────────────────────────────────────────── */
+    :root {
+      --bg:       #07090d;
+      --bg2:      #0d1117;
+      --bg3:      #12181f;
+      --border:   #1e2a36;
+      --border2:  #2a3a4a;
+      --green:    #00e87a;
+      --green-dim:#007a40;
+      --cyan:     #00ccff;
+      --amber:    #ffaa00;
+      --red:      #ff4455;
+      --muted:    #4a6070;
+      --text:     #c8d8e0;
+      --text-dim: #6a8090;
+      --font-mono:'JetBrains Mono', 'Fira Mono', 'Courier New', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.55;
+      min-height: 100vh;
+    }
+
+    /* Scanline overlay */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(
+        0deg, transparent, transparent 2px,
+        rgba(0,232,122,0.015) 2px, rgba(0,232,122,0.015) 4px
+      );
+      pointer-events: none; z-index: 999;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────── */
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg2);
+      position: sticky; top: 0; z-index: 10;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; color: var(--green); font-size: 15px; font-weight: 700; letter-spacing: 0.08em; }
+    .logo-hex { font-size: 22px; line-height: 1; }
+    .header-right { display: flex; align-items: center; gap: 10px; }
+    .node-pill { background: var(--bg3); border: 1px solid var(--border2); border-radius: 3px; padding: 3px 10px; color: var(--cyan); font-size: 11px; letter-spacing: 0.05em; }
+    .defcon-pill { border-radius: 3px; padding: 3px 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; border: 1px solid; }
+    .defcon-1  { color: #00e87a; border-color: #007a40; background: rgba(0,232,122,0.08); }
+    .defcon-3  { color: #ffcc00; border-color: #996600; background: rgba(255,200,0,0.08); }
+    .defcon-5  { color: #ffaa00; border-color: #7a5000; background: rgba(255,170,0,0.08); }
+    .defcon-7  { color: #ff6644; border-color: #7a2200; background: rgba(255,100,68,0.08); }
+    .defcon-10 { color: #ff4455; border-color: #7a0011; background: rgba(255,68,85,0.12); animation: blink 1s step-end infinite; }
+    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+    /* ── Status bar ──────────────────────────────────────────────── */
+    .statusbar { display: flex; gap: 0; border-bottom: 1px solid var(--border); background: var(--bg2); overflow-x: auto; }
+    .stat { padding: 8px 18px; border-right: 1px solid var(--border); white-space: nowrap; flex-shrink: 0; }
+    .stat-label { color: var(--text-dim); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; }
+    .stat-value { color: var(--text); margin-top: 1px; }
+    .stat-value.ok   { color: var(--green); }
+    .stat-value.warn { color: var(--amber); }
+    .stat-value.err  { color: var(--red);   }
+    .pulse { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--green); margin-right: 5px; animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+    /* ── Compose button ──────────────────────────────────────────── */
+    .btn-compose {
+      margin: auto 16px auto auto;
+      padding: 6px 16px;
+      background: transparent;
+      border: 1px solid var(--green-dim);
+      color: var(--green);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      border-radius: 3px;
+      transition: background 0.15s;
+      flex-shrink: 0;
+    }
+    .btn-compose:hover { background: rgba(0,232,122,0.1); }
+
+    /* ── Token config area ───────────────────────────────────────── */
+    .token-bar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 6px 20px;
+      background: var(--bg3);
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+    }
+    .token-label { color: var(--text-dim); white-space: nowrap; }
+    .token-input {
+      background: var(--bg2); border: 1px solid var(--border2);
+      color: var(--cyan); font-family: var(--font-mono); font-size: 11px;
+      padding: 3px 8px; border-radius: 3px; width: 200px; outline: none;
+    }
+    .token-input:focus { border-color: var(--green-dim); }
+    .token-hint { color: var(--muted); font-size: 10px; }
+
+    /* ── Main grid ───────────────────────────────────────────────── */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--border);
+      padding: 1px;
+    }
+    @media (max-width: 680px) { .grid { grid-template-columns: 1fr; } }
+
+    /* ── Panel ───────────────────────────────────────────────────── */
+    .panel { background: var(--bg2); overflow: hidden; }
+    .panel-full { grid-column: 1 / -1; }
+    .panel-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; border-bottom: 1px solid var(--border); background: var(--bg3); }
+    .panel-title { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+    .panel-count { font-size: 10px; color: var(--green-dim); background: rgba(0,232,122,0.08); border: 1px solid var(--green-dim); border-radius: 2px; padding: 1px 6px; }
+    .panel-body { padding: 10px 14px; max-height: 260px; overflow-y: auto; }
+    .panel-body::-webkit-scrollbar { width: 4px; }
+    .panel-body::-webkit-scrollbar-track { background: var(--bg2); }
+    .panel-body::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+    /* ── Activity log ────────────────────────────────────────────── */
+    .log-line { padding: 2px 0; color: var(--text-dim); font-size: 12px; border-bottom: 1px solid rgba(255,255,255,0.03); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .log-line .ts  { color: var(--muted); margin-right: 6px; }
+    .log-line .msg { color: var(--text-dim); }
+    .log-line.new  { color: var(--green); animation: fadeGreen 3s forwards; }
+    @keyframes fadeGreen { 0% { color: var(--green); } 100% { color: var(--text-dim); } }
+
+    /* ── Messages ────────────────────────────────────────────────── */
+    .msg-row { display: flex; align-items: flex-start; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+    .msg-row:last-child { border-bottom: none; }
+    .msg-icon { color: var(--cyan); font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+    .msg-meta { flex: 1; min-width: 0; }
+    .msg-subject { color: var(--text); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .msg-time    { color: var(--text-dim); font-size: 10px; margin-top: 2px; }
+    .msg-type { font-size: 10px; padding: 1px 5px; border-radius: 2px; flex-shrink: 0; align-self: center; }
+    .msg-type.public  { color: var(--amber); border: 1px solid var(--amber); }
+    .msg-type.private { color: var(--green); border: 1px solid var(--green-dim); }
+
+    /* ── File rows ───────────────────────────────────────────────── */
+    .file-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .file-row:last-child { border-bottom: none; }
+    .file-icon { color: var(--muted); font-size: 12px; }
+    .file-name { flex: 1; }
+    .file-name a { color: var(--cyan); text-decoration: none; }
+    .file-name a:hover { text-decoration: underline; }
+    .file-size { color: var(--text-dim); font-size: 11px; }
+
+    /* ── Beacons ─────────────────────────────────────────────────── */
+    .beacon-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .beacon-row:last-child { border-bottom: none; }
+    .beacon-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+    .beacon-dot.warn { background: var(--amber); }
+    .beacon-dot.err  { background: var(--red); }
+    .beacon-name { flex: 1; }
+    .beacon-coord { color: var(--text-dim); font-size: 11px; }
+
+    /* ── Security panel ──────────────────────────────────────────── */
+    .sec-row { display: flex; gap: 12px; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 12px; }
+    .sec-key  { color: var(--text-dim); width: 130px; flex-shrink: 0; }
+    .sec-val  { color: var(--text); }
+    .sec-val.ok   { color: var(--green); }
+    .sec-val.warn { color: var(--amber); }
+    .sec-val.err  { color: var(--red);   }
+
+    /* DEFCON quick controls */
+    .sec-controls { display: flex; gap: 8px; padding: 8px 0 4px; flex-wrap: wrap; }
+    .btn-sec { padding: 4px 12px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em; cursor: pointer; border-radius: 3px; border: 1px solid; background: transparent; transition: background 0.15s; }
+    .btn-sec.raise  { color: var(--amber); border-color: #7a5000; }
+    .btn-sec.raise:hover  { background: rgba(255,170,0,0.1); }
+    .btn-sec.lower  { color: var(--green); border-color: var(--green-dim); }
+    .btn-sec.lower:hover  { background: rgba(0,232,122,0.1); }
+    .btn-sec.attack { color: var(--red);   border-color: #7a0011; }
+    .btn-sec.attack:hover { background: rgba(255,68,85,0.1); }
+    .btn-sec.clear  { color: var(--cyan);  border-color: #006080; }
+    .btn-sec.clear:hover  { background: rgba(0,204,255,0.1); }
+    .sec-action-status { font-size: 11px; color: var(--muted); padding: 4px 0; }
+
+    /* ── Tabs ────────────────────────────────────────────────────── */
+    .tabs { display: flex; border-bottom: 1px solid var(--border); background: var(--bg3); }
+    .tab { padding: 7px 16px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s; }
+    .tab:hover  { color: var(--text); }
+    .tab.active { color: var(--green); border-bottom-color: var(--green); }
+
+    /* ── Compose modal ───────────────────────────────────────────── */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(7,9,13,0.85);
+      z-index: 100;
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--bg2);
+      border: 1px solid var(--border2);
+      border-radius: 4px;
+      width: min(580px, 95vw);
+      padding: 0;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    }
+    .modal-head { padding: 14px 18px; border-bottom: 1px solid var(--border); background: var(--bg3); display: flex; justify-content: space-between; align-items: center; }
+    .modal-title { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--green); }
+    .modal-close { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; padding: 0 4px; }
+    .modal-close:hover { color: var(--text); }
+    .modal-body { padding: 18px; }
+    .form-row { margin-bottom: 12px; }
+    .form-label { display: block; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 4px; }
+    .form-input, .form-select, .form-textarea {
+      width: 100%;
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      padding: 7px 10px;
+      border-radius: 3px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--green-dim); }
+    .form-textarea { height: 120px; resize: vertical; }
+    .form-select option { background: var(--bg3); }
+    .form-hint { font-size: 10px; color: var(--muted); margin-top: 3px; }
+    .modal-actions { padding: 14px 18px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+    .btn { padding: 7px 18px; font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; cursor: pointer; border-radius: 3px; border: 1px solid; transition: background 0.15s; }
+    .btn-primary { background: transparent; border-color: var(--green-dim); color: var(--green); }
+    .btn-primary:hover { background: rgba(0,232,122,0.1); }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-secondary { background: transparent; border-color: var(--border2); color: var(--text-dim); }
+    .btn-secondary:hover { background: rgba(255,255,255,0.04); }
+    .compose-status { font-size: 11px; margin-right: auto; padding: 0 4px; }
+    .compose-status.ok   { color: var(--green); }
+    .compose-status.err  { color: var(--red); }
+    .compose-status.busy { color: var(--amber); }
+
+    /* ── Empty states ────────────────────────────────────────────── */
+    .empty { color: var(--muted); font-size: 12px; padding: 18px 0; text-align: center; }
+
+    /* ── Error banner ────────────────────────────────────────────── */
+    #error-banner { display: none; background: rgba(255,68,85,0.12); border: 1px solid var(--red); color: var(--red); padding: 8px 20px; font-size: 12px; text-align: center; }
+
+    /* ── Footer ──────────────────────────────────────────────────── */
+    footer { padding: 10px 20px; border-top: 1px solid var(--border); background: var(--bg2); display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 10px; }
+    footer a { color: var(--cyan); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+    .refresh-bar { height: 2px; background: var(--border); width: 100%; position: fixed; bottom: 0; left: 0; }
+    .refresh-progress { height: 100%; background: var(--green); width: 100%; transform-origin: left; animation: countdown 10s linear infinite; }
+    @keyframes countdown { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <span class="logo-hex">⬡</span>
+      OdinNet Dashboard
+    </div>
+    <div class="header-right">
+      <div class="defcon-pill defcon-1" id="hdr-defcon">DEFCON 1</div>
+      <div class="node-pill" id="hdr-node">node: —</div>
+    </div>
+  </header>
+
+  <!-- Error banner -->
+  <div id="error-banner">⚠ Cannot reach daemon — retrying…</div>
+
+  <!-- API Token bar (saves to localStorage for session) -->
+  <div class="token-bar">
+    <span class="token-label">API Token:</span>
+    <input class="token-input" id="api-token" type="password"
+           placeholder="odinnet-dev"
+           title="Set ODINNET_TOKEN on daemon to change this">
+    <span class="token-hint">Set to match ODINNET_TOKEN env var on daemon (default: odinnet-dev)</span>
+  </div>
+
+  <!-- Status bar -->
+  <div class="statusbar">
+    <div class="stat">
+      <div class="stat-label">Status</div>
+      <div class="stat-value ok" id="stat-status"><span class="pulse"></span>online</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Uptime</div>
+      <div class="stat-value" id="stat-uptime">—</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Polls</div>
+      <div class="stat-value" id="stat-polls">—</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Last Poll</div>
+      <div class="stat-value" id="stat-last">—</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">LatticeFS</div>
+      <div class="stat-value" id="stat-lfs">—</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Poll Range</div>
+      <div class="stat-value" id="stat-range">—</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Received</div>
+      <div class="stat-value ok" id="stat-received">—</div>
+    </div>
+    <button class="btn-compose" id="open-compose">✏ Compose</button>
+  </div>
+
+  <!-- Main grid -->
+  <div class="grid">
+
+    <!-- Activity log -->
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title">Activity Log</span>
+        <span class="panel-count" id="log-count">0 events</span>
+      </div>
+      <div class="panel-body" id="activity-log">
+        <div class="empty">Waiting for daemon…</div>
+      </div>
+    </div>
+
+    <!-- Messages with tabs -->
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title">Messages</span>
+        <span class="panel-count" id="msg-count">0 received</span>
+      </div>
+      <div class="tabs">
+        <div class="tab active" id="tab-all"      onclick="switchTab('all')">All</div>
+        <div class="tab"        id="tab-temporal" onclick="switchTab('temporal')">Temporal</div>
+        <div class="tab"        id="tab-rt"       onclick="switchTab('realtime')">Realtime</div>
+      </div>
+      <div class="panel-body" id="msg-list">
+        <div class="empty">No messages received yet.</div>
+      </div>
+    </div>
+
+    <!-- LatticeFS files -->
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title">LatticeFS Files</span>
+        <span class="panel-count" id="fs-count">0 files</span>
+      </div>
+      <div class="panel-body" id="fs-list">
+        <div class="empty">LatticeFS not mounted.</div>
+      </div>
+    </div>
+
+    <!-- Beacons -->
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title">Beacon Registry</span>
+        <span class="panel-count" id="beacon-count">0 beacons</span>
+      </div>
+      <div class="panel-body" id="beacon-list">
+        <div class="empty">No beacons registered.</div>
+      </div>
+    </div>
+
+    <!-- Security panel (full width) -->
+    <div class="panel panel-full">
+      <div class="panel-head">
+        <span class="panel-title">⬡ Security Status</span>
+        <span class="panel-count" id="sec-count">DEFCON 1</span>
+      </div>
+      <div class="panel-body" id="sec-panel" style="max-height:240px">
+        <div class="empty">Loading security status…</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <span>⬡ Burris Numerical System — OdinNet v4</span>
+    <span>
+      <a href="/status">JSON status</a>
+      &nbsp;|&nbsp;
+      <a href="/readme.txt">readme</a>
+      &nbsp;|&nbsp;
+      <span id="footer-refresh">refreshing in 10s</span>
+    </span>
+  </footer>
+
+  <div class="refresh-bar"><div class="refresh-progress" id="refresh-bar"></div></div>
+
+  <!-- ── Compose Modal ───────────────────────────────────────────── -->
+  <div class="modal-overlay" id="compose-overlay">
+    <div class="modal" role="dialog" aria-label="Compose Message">
+      <div class="modal-head">
+        <span class="modal-title">✏ Compose Temporal Message</span>
+        <button class="modal-close" id="close-compose" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <label class="form-label" for="c-to">To (alias or leave blank for broadcast)</label>
+          <input class="form-input" id="c-to" type="text" placeholder="Contact alias or node id…" autocomplete="off">
+          <div class="form-hint" id="c-to-hint">Type an alias from your address book</div>
+        </div>
+        <div class="form-row">
+          <label class="form-label" for="c-date">Delivery Date</label>
+          <input class="form-input" id="c-date" type="date">
+        </div>
+        <div class="form-row">
+          <label class="form-label" for="c-type">Message Type</label>
+          <select class="form-select" id="c-type">
+            <option value="PRIVATE">PRIVATE — personal coordinate only</option>
+            <option value="PUBLIC">PUBLIC — via beacon</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label class="form-label" for="c-subject">Subject</label>
+          <input class="form-input" id="c-subject" type="text" placeholder="Subject line…">
+        </div>
+        <div class="form-row">
+          <label class="form-label" for="c-body">Body</label>
+          <textarea class="form-textarea" id="c-body" placeholder="Message body…"></textarea>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <span class="compose-status" id="compose-status"></span>
+        <button class="btn btn-secondary" id="cancel-compose">Cancel</button>
+        <button class="btn btn-primary"   id="save-outbox">Save to Outbox</button>
+        <button class="btn btn-primary"   id="send-now">Send Now ▶</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── State ─────────────────────────────────────────────────────────────
+    let _status      = null;
+    let _activeTab   = 'all';
+    let _allMessages = [];
+    let _prevLogLen  = 0;
+    let _tickStart   = Date.now();
+    let _refreshTimer = null;
+    const INTERVAL   = 10;
+
+    // ── API Token ─────────────────────────────────────────────────────────
+    // Token is read from the input field on every API call.
+    // Default matches daemon default (ODINNET_TOKEN env var).
+    const tokenInput = document.getElementById('api-token');
+    tokenInput.value = localStorage.getItem('odinnet_token') || 'odinnet-dev';
+    tokenInput.addEventListener('change', () => {
+      localStorage.setItem('odinnet_token', tokenInput.value);
+    });
+    function getToken() { return tokenInput.value || 'odinnet-dev'; }
+
+    // ── Authenticated fetch helper ─────────────────────────────────────────
+    async function apiFetch(path, opts = {}) {
+      const headers = Object.assign({
+        'Content-Type':    'application/json',
+        'X-OdinNet-Token': getToken(),
+      }, opts.headers || {});
+      return fetch(path, Object.assign({}, opts, { headers }));
+    }
+
+    // ── Compose modal ──────────────────────────────────────────────────────
+    const overlay = document.getElementById('compose-overlay');
+
+    function openCompose() {
+      const today = new Date().toISOString().slice(0, 10);
+      document.getElementById('c-date').value = today;
+      document.getElementById('compose-status').textContent = '';
+      document.getElementById('compose-status').className = 'compose-status';
+      overlay.classList.add('open');
+    }
+    function closeCompose() { overlay.classList.remove('open'); }
+
+    document.getElementById('open-compose').addEventListener('click', openCompose);
+    document.getElementById('close-compose').addEventListener('click', closeCompose);
+    document.getElementById('cancel-compose').addEventListener('click', closeCompose);
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeCompose(); });
+
+    document.getElementById('c-to').addEventListener('input', function() {
+      const hint = document.getElementById('c-to-hint');
+      const val  = this.value.trim();
+      if (!val) { hint.textContent = 'Type an alias from your address book'; return; }
+      hint.textContent = `Will resolve "${val}" via address book on daemon`;
+    });
+
+    async function _postCompose(sendAfter) {
+      const statusEl = document.getElementById('compose-status');
+      const toDate   = document.getElementById('c-date').value;
+      const subject  = document.getElementById('c-subject').value.trim();
+      const body     = document.getElementById('c-body').value.trim();
+      const msgType  = document.getElementById('c-type').value;
+
+      if (!toDate || !subject) {
+        statusEl.className = 'compose-status err';
+        statusEl.textContent = '⚠ Date and subject required.';
+        return;
+      }
+
+      statusEl.className = 'compose-status busy';
+      statusEl.textContent = '⏳ Saving…';
+      document.getElementById('save-outbox').disabled = true;
+      document.getElementById('send-now').disabled    = true;
+
+      try {
+        const r = await apiFetch('/api/compose', {
+          method: 'POST',
+          body:   JSON.stringify({ to_date: toDate, subject, body, msg_type: msgType }),
+        });
+        const data = await r.json();
+        if (!data.ok) throw new Error(data.error || 'Compose failed');
+
+        statusEl.className = 'compose-status ok';
+        statusEl.textContent = `✅ Saved: ${data.file}`;
+
+        if (sendAfter) {
+          statusEl.textContent = '⏳ Sending…';
+          const r2   = await apiFetch('/api/send', { method: 'POST', body: '{}' });
+          const d2   = await r2.json();
+          if (!d2.ok) throw new Error(d2.error || 'Send failed');
+          statusEl.textContent = `✅ Sent (${d2.sent} message(s))`;
+        }
+
+        setTimeout(closeCompose, 1600);
+        fetchStatus();
+
+      } catch(e) {
+        statusEl.className = 'compose-status err';
+        statusEl.textContent = `⚠ ${e.message}`;
+      } finally {
+        document.getElementById('save-outbox').disabled = false;
+        document.getElementById('send-now').disabled    = false;
+      }
+    }
+
+    document.getElementById('save-outbox').addEventListener('click', () => _postCompose(false));
+    document.getElementById('send-now').addEventListener('click',    () => _postCompose(true));
+
+    // ── Security quick controls ────────────────────────────────────────────
+    async function secAction(path, body) {
+      const statusEl = document.getElementById('sec-action-status');
+      if (statusEl) { statusEl.textContent = '⏳ …'; statusEl.className = 'sec-action-status'; }
+      try {
+        const r    = await apiFetch(path, { method: 'POST', body: JSON.stringify(body) });
+        const data = await r.json();
+        if (statusEl) {
+          statusEl.textContent = data.ok
+            ? `✅ DEFCON → ${data.defcon || '?'}`
+            : `⚠ ${data.error}`;
+          statusEl.className = 'sec-action-status ' + (data.ok ? '' : 'err');
+        }
+        fetchStatus();
+      } catch(e) {
+        if (statusEl) { statusEl.textContent = `⚠ ${e.message}`; statusEl.className = 'sec-action-status err'; }
+      }
+    }
+
+    // ── Tab switching ──────────────────────────────────────────────────────
+    function switchTab(name) {
+      _activeTab = name;
+      ['all', 'temporal', 'realtime'].forEach(t => {
+        document.getElementById('tab-' + (t === 'realtime' ? 'rt' : t))
+          .classList.toggle('active', t === name);
+      });
+      renderMessages();
+    }
+
+    // ── Fetch + render ─────────────────────────────────────────────────────
+    async function fetchStatus() {
+      try {
+        const r = await fetch('/status', { cache: 'no-store' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const data = await r.json();
+        _status = data;
+        document.getElementById('error-banner').style.display = 'none';
+        renderAll(data);
+      } catch(e) {
+        document.getElementById('error-banner').style.display = 'block';
+        document.getElementById('stat-status').innerHTML =
+          '<span style="color:var(--red)">⚠ unreachable</span>';
+      }
+    }
+
+    function renderAll(d) {
+      document.getElementById('hdr-node').textContent = 'node: ' + (d.node_id || '?');
+
+      const sec    = d.security || {};
+      const defcon = sec.defcon || 1;
+      const defEl  = document.getElementById('hdr-defcon');
+      defEl.textContent = `DEFCON ${defcon}`;
+      defEl.className   = 'defcon-pill defcon-' + [1,3,5,7,10].reduce((prev,cur) =>
+        Math.abs(cur - defcon) < Math.abs(prev - defcon) ? cur : prev, 1);
+
+      document.getElementById('stat-uptime').textContent   = d.uptime_sec != null ? fmtUptime(d.uptime_sec) : '—';
+      document.getElementById('stat-polls').textContent    = d.poll_count ?? '—';
+      document.getElementById('stat-last').textContent     = fmtTime(d.last_poll) || 'never';
+      document.getElementById('stat-received').textContent = (d.received_count ?? 0) + ' msgs';
+
+      const lfsEl = document.getElementById('stat-lfs');
+      if (d.lattice_fs) { lfsEl.className = 'stat-value ok'; lfsEl.textContent = '✅ ' + (d.lattice_files || []).length + ' files'; }
+      else              { lfsEl.className = 'stat-value warn'; lfsEl.textContent = '⚠ not mounted'; }
+
+      const rangeEl = document.getElementById('stat-range');
+      if (d.poll_range_set) { rangeEl.className = 'stat-value ok'; rangeEl.textContent = '✅ set'; }
+      else                  { rangeEl.className = 'stat-value warn'; rangeEl.textContent = '⚠ not set'; }
+
+      renderActivityLog(d.activity_tail || []);
+
+      _allMessages = (d.recent_received || []).concat(d.recent_realtime || []);
+      _allMessages.sort((a,b) => (b.recv_time||'').localeCompare(a.recv_time||''));
+      document.getElementById('msg-count').textContent = (d.received_count ?? 0) + ' received';
+      renderMessages();
+
+      renderFiles(d.lattice_files || []);
+      renderBeacons(d.beacons || []);
+      renderSecurity(d.security || {});
+    }
+
+    function renderActivityLog(lines) {
+      const el    = document.getElementById('activity-log');
+      const count = document.getElementById('log-count');
+      const isNew = lines.length > _prevLogLen;
+      _prevLogLen = lines.length;
+      count.textContent = lines.length + ' events';
+      if (!lines.length) { el.innerHTML = '<div class="empty">No activity yet.</div>'; return; }
+      const rev = [...lines].reverse();
+      el.innerHTML = rev.map((line, i) => {
+        const ts  = line.match(/^\[(\d{2}:\d{2}:\d{2})\]/);
+        const msg = ts ? line.slice(ts[0].length).trim() : line;
+        const cls = (i === 0 && isNew) ? 'log-line new' : 'log-line';
+        return `<div class="${cls}"><span class="ts">${ts?ts[1]:''}</span><span class="msg">${escHtml(msg)}</span></div>`;
+      }).join('');
+    }
+
+    function renderMessages() {
+      const el = document.getElementById('msg-list');
+      let msgs = _allMessages;
+      if (_activeTab === 'temporal') msgs = msgs.filter(m => m.type !== 'realtime');
+      else if (_activeTab === 'realtime') msgs = msgs.filter(m => m.type === 'realtime');
+      if (!msgs.length) { el.innerHTML = '<div class="empty">No messages in this view.</div>'; return; }
+      el.innerHTML = msgs.slice(0, 20).map(m => {
+        const typeTag = m.type === 'realtime'
+          ? '<span class="msg-type public">RT</span>'
+          : m.msg_type === 'PUBLIC'
+            ? '<span class="msg-type public">PUBLIC</span>'
+            : '<span class="msg-type private">PRIVATE</span>';
+        const subj = m.subject || m.preview || '(no subject)';
+        const when = fmtTime(m.recv_time) || '—';
+        return `<div class="msg-row"><span class="msg-icon">📨</span><div class="msg-meta"><div class="msg-subject">${escHtml(subj)}</div><div class="msg-time">${when}</div></div>${typeTag}</div>`;
+      }).join('');
+    }
+
+    function renderFiles(files) {
+      const el    = document.getElementById('fs-list');
+      const count = document.getElementById('fs-count');
+      if (!files.length) { count.textContent = '0 files'; el.innerHTML = '<div class="empty">No files in LatticeFS.</div>'; return; }
+      count.textContent = files.length + ' file' + (files.length !== 1 ? 's' : '');
+      el.innerHTML = files.map(f => {
+        const name = typeof f === 'string' ? f : f.name;
+        const size = typeof f === 'string' ? '' : fmtBytes(f.byte_length);
+        return `<div class="file-row"><span class="file-icon">▸</span><span class="file-name"><a href="/${escHtml(name)}">${escHtml(name)}</a></span><span class="file-size">${size}</span></div>`;
+      }).join('');
+    }
+
+    function renderBeacons(beacons) {
+      const el    = document.getElementById('beacon-list');
+      const count = document.getElementById('beacon-count');
+      count.textContent = beacons.length + ' beacon' + (beacons.length !== 1 ? 's' : '');
+      if (!beacons.length) { el.innerHTML = '<div class="empty">No beacons registered.</div>'; return; }
+      el.innerHTML = beacons.map(b => {
+        const name  = b.name || '(unnamed)';
+        const coord = b.coordinate ? String(b.coordinate).slice(0,18) + '…' : '?';
+        const rep   = b.reputation_score;
+        const dotCls = rep != null
+          ? (rep >= 60 ? 'beacon-dot' : rep >= 30 ? 'beacon-dot warn' : 'beacon-dot err')
+          : 'beacon-dot';
+        const repBadge = rep != null ? `<span style="font-size:10px;color:var(--text-dim)"> rep:${rep}</span>` : '';
+        return `<div class="beacon-row"><div class="${dotCls}"></div><span class="beacon-name">${escHtml(name)}${repBadge}</span><span class="beacon-coord">${escHtml(coord)}</span></div>`;
+      }).join('');
+    }
+
+    function renderSecurity(sec) {
+      const el    = document.getElementById('sec-panel');
+      const count = document.getElementById('sec-count');
+
+      if (!sec || !sec.defcon) {
+        el.innerHTML = '<div class="empty">Security module not loaded.</div>';
+        return;
+      }
+
+      count.textContent = `DEFCON ${sec.defcon} — ${sec.defcon_label || ''}`;
+
+      const rows = [
+        ['DEFCON Level',   `${sec.defcon_color || ''} ${sec.defcon} — ${sec.defcon_label || '—'}`, sec.defcon <= 3 ? 'ok' : sec.defcon <= 5 ? 'warn' : 'err'],
+        ['Attack Active',  sec.attack_active ? '⚠ YES' : '✅ no',                                   sec.attack_active ? 'err' : 'ok'],
+        ['Encryption',     sec.encryption_req || '—',                                               sec.aes256_required ? 'warn' : ''],
+        ['Dummy Beacons',  sec.dummy_beacons  ? '✅ allowed' : '⛔ banned',                         sec.dummy_beacons  ? 'ok' : 'warn'],
+        ['Beacon Rotate',  sec.beacon_rotate  ? '✅ active'  : '—',                                 sec.beacon_rotate  ? 'warn' : ''],
+        ['Banned Entries', String(sec.banned_count || 0),                                           sec.banned_count > 0 ? 'warn' : 'ok'],
+      ];
+
+      const rowsHTML = rows.map(([k, v, cls]) =>
+        `<div class="sec-row"><span class="sec-key">${escHtml(k)}</span><span class="sec-val ${cls||''}">${escHtml(v)}</span></div>`
+      ).join('');
+
+      // DEFCON quick-action controls
+      const controls = `
+        <div class="sec-controls">
+          <button class="btn-sec raise"  onclick="secAction('/api/security/raise',   {reason:'dashboard'})">▲ Raise DEFCON</button>
+          <button class="btn-sec lower"  onclick="secAction('/api/security/lower',   {reason:'dashboard'})">▼ Lower DEFCON</button>
+          <button class="btn-sec attack" onclick="secAction('/api/security/attack',  {detail:'dashboard_reported'})">⚠ Declare Attack</button>
+          <button class="btn-sec clear"  onclick="secAction('/api/security/cleared', {reason:'dashboard_cleared'})">✅ Clear Attack</button>
+        </div>
+        <div class="sec-action-status" id="sec-action-status"></div>
+      `;
+
+      el.innerHTML = rowsHTML + controls;
+    }
+
+    // ── Utilities ──────────────────────────────────────────────────────────
+    function escHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function fmtUptime(secs) {
+      const h = Math.floor(secs/3600), m = Math.floor((secs%3600)/60), s = secs%60;
+      return [h,m,s].map(n=>String(n).padStart(2,'0')).join(':');
+    }
+    function fmtTime(ts) {
+      if (!ts) return '';
+      const m = String(ts).match(/(\d{2}:\d{2}(:\d{2})?)/);
+      return m ? m[0] : ts;
+    }
+    function fmtBytes(n) {
+      if (n==null) return '';
+      if (n<1024)    return n+' B';
+      if (n<1048576) return (n/1024).toFixed(1)+' KB';
+      return (n/1048576).toFixed(2)+' MB';
+    }
+
+    // ── Countdown + auto-refresh ───────────────────────────────────────────
+    function tick() {
+      const elapsed = (Date.now() - _tickStart) / 1000;
+      const rem     = Math.max(0, INTERVAL - elapsed);
+      document.getElementById('footer-refresh').textContent = 'refreshing in ' + Math.ceil(rem) + 's';
+    }
+    function scheduleRefresh() {
+      _tickStart = Date.now();
+      const bar  = document.getElementById('refresh-bar');
+      bar.style.animation = 'none'; void bar.offsetWidth;
+      bar.style.animation = `countdown ${INTERVAL}s linear forwards`;
+      clearTimeout(_refreshTimer);
+      _refreshTimer = setTimeout(async () => { await fetchStatus(); scheduleRefresh(); }, INTERVAL * 1000);
+    }
+
+    // ── Boot ───────────────────────────────────────────────────────────────
+    fetchStatus().then(() => scheduleRefresh());
+    setInterval(tick, 500);
+  </script>
+</body>
+</html>
