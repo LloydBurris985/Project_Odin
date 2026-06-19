@@ -1,35 +1,50 @@
-# Project Odin — Burris Numerical System
+# OdinNet — Private Interstellar Internet
 
-**Starship Odin Temporal Communications & Informational Universe Engine**
+**100% Completely Private • 100% Completely Offline**
 
-A complete offline-first, temporal, coordinate-based communication and storage system built on reversible arithmetic coding.
+A sovereign, temporal, interstellar mathematical coordinate-polling system.  
+It crosses **no public networks**, **no airwaves**, and **no property lines**.
 
-## Core Components
+Built on the **Burris Numerical System** — an Einstein Brick Universe serving as both communications medium and hard drive.  
+True private folder/file sharing across space and time.
 
-### 1. ChartGenerator (`chart_generator.py`)
-- Bidirectional arithmetic coding (UP / DOWN)
-- Large-number hand-math (limb-based, no Python int bloat)
-- Navigation system: sublight, hyperspace jumps, change_r, bookmarks
-- Galactic Map with clean large-number display
-- `write_disk_image()` — decode any coordinate directly to file
-- **LatticeDrive** — paired-universe virtual block device (read/write heads)
+**Privacy and anonymity at their technological extreme.**  
+**Math is the language of the Gods.**
 
-### 2. GrokComms (`grok_comms.py`)
-- Temporal Communications Node
-- Coordinate-based messaging (your "temporal phone number")
-- Polling range calculation (fixed-length random or real file sampling + std dev)
-- Temporal Protocol (FROM_DATE / TO_DATE filtering)
-- Persistent message store
-- Interactive CLI (`temporal_comms`)
+---
 
-### 3. Key Features
-- True temporal messaging (send to past/future with TO_DATE filtering)
-- Offline-first design (no internet required)
-- Reversible encoding — any file can be encoded to a coordinate and decoded anywhere
-- Lattice Drive — virtual disk using two synchronized universes
-- Navigation console with galactic map
+## Vision
+
+OdinNet is not trying to replace the internet.  
+It is building a **parallel, sovereign network** that works when the regular one is censored, shut down, slow, expensive, or simply unavailable.
+
+Perfect for:
+- Private communities and families
+- Education in restricted regions
+- Censorship-resistant communication
+- Offline-first file sharing and exploration
+- Raspberry Pi seed nodes in remote or hostile environments
+
+---
+
+## Key Features
+
+- **Temporal Messaging** — Send messages across time (future-dated delivery)
+- **Realtime Chat** — Low-latency threaded conversations
+- **Public Beacons** — Usenet-style open forums and news groups
+- **Private Coordinates** — Direct person-to-person messaging
+- **LatticeFS** — Infinite virtual filesystem carved from coordinate space (your own Einstein Brick hard drive)
+- **File Carving & URLs** — `burris://` links that work completely offline
+- **DEFCON Security** — Adaptive military-grade defense with reputation system
+- **Fleet Jump Capability** — Change universes (R value) to escape threats
+- **Local-first** — Runs on phones, tablets, laptops, Raspberry Pis
+- **No registration • No ISP • No internet required**
+
+---
 
 ## Quick Start
 
-```bash
-python grok_comms.py
+1. Clone the repo
+2. Run the daemon:
+   ```bash
+   python odinnet_daemon.py
