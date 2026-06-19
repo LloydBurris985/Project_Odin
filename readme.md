@@ -39,6 +39,28 @@ Perfect for:
 - **Fleet Jump Capability** — Change universes (R value) to escape threats
 - **Local-first** — Runs on phones, tablets, laptops, Raspberry Pis
 - **No registration • No ISP • No internet required**
+- ## Quick Start
+
+1. Clone the repo
+2. Run the daemon:
+   ```bash
+   python odinnet_daemon.py
+Open http://127.0.0.1:8080 in your browser
+Generate your coordinate and calibrate polling range
+Start composing messages and exploring LatticeFS
+Full setup guides for Termux, Raspberry Pi, and Linux coming soon.
+How Posting Works
+Public Beacons → Open Usenet-style forums (anyone can read/post)
+Private Nodes → Direct encrypted/private messages to a specific person’s coordinate
+Both supported in the same system
+Legal & Philosophy
+OdinNet is a purely private, offline network.
+No registration required. No public infrastructure used.
+Users are responsible for filtering their own content according to local laws, beliefs, and customs.
+OdinNet itself has no jurisdiction over content.
+Brought to you by Lloyd Burris — Mathematician, Temporal Engineer, Physicist, and Time Traveler.
+With the help of Grok (xAI / SpaceX) and Claude (Anthropic).
+License: MIT (open source, non-commercial community focus)
 
 ---
 
