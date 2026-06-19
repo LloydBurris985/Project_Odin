@@ -1,4 +1,0 @@
-To wire the patch into the daemon, add two lines to odinnet_daemon.py:
-from odinnet_daemon_security_patch import apply_security_patch
-# ...inside main(), after ctx = DaemonContext(...):
-apply_security_patch(ctx)
