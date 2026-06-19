@@ -62,6 +62,8 @@ Brought to you by Lloyd Burris — Mathematician, Temporal Engineer, Physicist, 
 With the help of Grok (xAI / SpaceX) and Claude (Anthropic).
 License: MIT (open source, non-commercial community focus)
 
+Starship Odin flies true.
+
 ---
 
 ## Quick Start
