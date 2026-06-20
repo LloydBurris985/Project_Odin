@@ -1,4 +1,4 @@
-# OdinNet — Private Interstellar Internet
+# OdinNet — Private Interstellar Internet. Connecting universes across space and time. 
 
 **100% Completely Private • 100% Completely Offline**
 
