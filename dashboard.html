@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>⚡ ODINNET BRIDGE INTERFACE</title>
+    <style>
+        :root {
+            --bg-base: #0a0e12;
+            --border-heavy: #3a2a1d;
+            --border-glow: #bf8f30;
+            --text-primary: #ddccaa;
+            --text-alert: #df3030;
+            --text-ok: #30df60;
+            --panel-bg: #121820;
+            --terminal-bg: #05070a;
+        }
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            padding: 20px;
+            margin: 0;
+        }
+        .bridge-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .header-panel {
+            background: var(--panel-bg);
+            border: 2px solid var(--border-heavy);
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+        }
+        h1, h2, h3 { 
+            margin: 0 0 10px 0; 
+            letter-spacing: 2px;
+        }
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+            font-size: 13px;
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-left: 3px solid var(--border-glow);
+        }
+        .grid-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-heavy);
+            padding: 15px;
+            border-radius: 2px;
+            box-shadow: 3px 3px 8px rgba(0,0,0,0.5);
+        }
+        .full-width { grid-column: span 2; }
+        pre, .terminal-box {
+            background: var(--terminal-bg);
+            color: #88ccff;
+            padding: 12px;
+            display: block;
+            border: 1px solid #1a2230;
+            font-size: 13px;
+            overflow-x: auto;
+            max-height: 250px;
+            margin: 0;
+        }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 12px; }
+        input[type="text"], textarea {
+            width: 100%;
+            background: var(--terminal-bg);
+            border: 1px solid var(--border-heavy);
+            color: #ffffff;
+            padding: 10px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+        input[type="text"]:focus, textarea:focus {
+            border-color: var(--border-glow);
+            outline: none;
+        }
+        button {
+            background: #4a1515;
+            color: #ffcccc;
+            border: 1px solid #993333;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        button:hover { background: #662222; border-color: #ff4444; }
+        .badge {
+            padding: 3px 8px;
+            background: #2a1a10;
+            border: 1px solid var(--border-glow);
+            color: var(--border-glow);
+            font-size: 12px;
+        }
+        .msg-item {
+            border-bottom: 1px dashed var(--border-heavy);
+            padding: 10px 0;
+        }
+        .msg-item:last-child { border-bottom: none; }
+        .alert-box {
+            border: 1px solid var(--text-alert);
+            background: rgba(223, 48, 48, 0.1);
+            padding: 10px;
+            margin-top: 10px;
+            color: var(--text-alert);
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="bridge-container">
+    <div class="header-panel">
+        <h2>⬡ ODINNET TACTICAL COMMAND BRIDGE <span id="node-id-lbl" class="badge">NODE: LOADING</span></h2>
+        <div class="status-grid">
+            <div>SYSTEM UPTIME: <span id="uptime-val" style="color:var(--text-ok);">00:00:00</span></div>
+            <div>SWEEP CYCLES: <span id="poll-count-val">0</span></div>
+            <div>FLEET AXIS R: <span id="universe-r-val" style="color:var(--border-glow);">1</span></div>
+            <div>SECURITY STATUS: <span id="defcon-val">--</span></div>
+        </div>
+        <div id="attack-alert" class="alert-box">🚨 CRITICAL WARNING: LOCAL ATTACK VECTOR DETECTED ON NODE NETWORK AXIS</div>
+    </div>
+
+    <div class="grid-layout">
+        <div class="panel">
+            <h3>📡 DEPLOY WAVE TRANSMISSION (BEACON DROP)</h3>
+            <form id="compose-form">
+                <div class="form-group">
+                    <label>TARGET ADRESS PATH / NEWSGROUP WINDOW</label>
+                    <input type="text" id="msg-group" value="sci.burris.odinnet" placeholder="e.g. sci.burris.odinnet">
+                </div>
+                <div class="form-group">
+                    <label>CONTEXT SUBJECT LINE HEADER</label>
+                    <input type="text" id="msg-subject" placeholder="Input structural context verification token...">
+                </div>
+                <div class="form-group">
+                    <label>DATA PAYLOAD MATRIX BODY</label>
+                    <textarea id="msg-body" rows="5" placeholder="Input secure transmission string packet parameters..."></textarea>
+                </div>
+                <button type="submit">Fire Wave Packet</button>
+            </form>
+            <div id="tx-status" style="margin-top:10px; font-weight:bold;"></div>
+        </div>
+
+        <div class="panel">
+            <h3>📥 DISK JOURNAL INBOX MATRIX LOG</h3>
+            <div id="inbox-stream" style="max-height: 320px; overflow-y: auto;">
+                <p style="color: gray;">Awaiting polling synchronizer state updates...</p>
+            </div>
+        </div>
+
+        <div class="panel full-width">
+            <h3>🔗 INTEGRATED SYSTEM RESOLVER ADDRESS UTILITY</h3>
+            <div class="form-group" style="display:flex; gap:10px;">
+                <input type="text" id="resolver-url" placeholder="burris://virtual_space_address_pointer">
+                <button type="button" id="btn-resolve" style="background:#153a20; border-color:#339955; color:#ccffdd;">RESOLVE LINK</button>
+            </div>
+            <pre id="resolver-output">Awaiting asset string conversion processing execution request...</pre>
+        </div>
+
+        <div class="panel full-width">
+            <h3>💾 HARD DISK VERIFICATION ACTIVITY LOG STREAM</h3>
+            <pre id="log-terminal">System boot sequencing initiated. Tracking physical file transaction signatures...</pre>
+        </div>
+    </div>
+</div>
+
+<script>
+    async function updateBridgeState() {
+        try {
+            let res = await fetch('/status');
+            if(!res.ok) return;
+            let data = await res.json();
+            
+            document.getElementById('node-id-lbl').textContent = `NODE: ${data.node_id}`;
+            document.getElementById('poll-count-val').textContent = data.poll_count;
+            document.getElementById('universe-r-val').textContent = data.current_r;
+            document.getElementById('defcon-val').textContent = `${data.defcon_color} LVL ${data.defcon} [${data.defcon_label}]`;
+            
+            let hrs = Math.floor(data.uptime_sec / 3600).toString().padStart(2, '0');
+            let mins = Math.floor((data.uptime_sec % 3600) / 60).toString().padStart(2, '0');
+            let secs = Math.floor(data.uptime_sec % 60).toString().padStart(2, '0');
+            document.getElementById('uptime-val').textContent = `${hrs}:${mins}:${secs}`;
+
+            let alertBox = document.getElementById('attack-alert');
+            if(data.attack_active) { alertBox.style.display = 'block'; } else { alertBox.style.display = 'none'; }
+
+            let logBox = document.getElementById('log-terminal');
+            logBox.textContent = data.activity_tail ? data.activity_tail.join('\n') : "System idle.";
+            logBox.scrollTop = logBox.scrollHeight;
+
+        } catch (err) { console.error("Telemetry channel synchronization update drop: ", err); }
+    }
+
+    async function queryUsenetFeed() {
+        try {
+            let group = document.getElementById('msg-group').value || "sci.burris.odinnet";
+            let res = await fetch(`/api/usenet/feed?group=${encodeURIComponent(group)}`);
+            if(!res.ok) return;
+            let frames = await res.json();
+            let inboxBox = document.getElementById('inbox-stream');
+            
+            if(!frames || frames.length === 0) {
+                inboxBox.innerHTML = "<p style='color:gray;'>Coordinate channel frame block mapping clear.</p>";
+                return;
+            }
+
+            let html = '';
+            frames.forEach(f => {
+                html += `<div class="msg-item">
+                    <strong>⚡ [COORD V: ${f.v_target}] - SUBJECT: ${f.subject}</strong><br>
+                    <span style="color:#ffffff;">${f.body}</span><br>
+                    <small style="color:#88aacc;">ORIGIN SENDER TOKEN: Node ${f.sender_node} | EPOCH FRAME: ${f.epoch}</small>
+                </div>`;
+            });
+            inboxBox.innerHTML = html;
+        } catch (err) { console.error("Usenet matrix pool trace drop: ", err); }
+    }
+
+    document.getElementById('compose-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        let txStatus = document.getElementById('tx-status');
+        txStatus.style.color = "orange";
+        txStatus.textContent = "Deriving baseline matrix anchors...";
+
+        let payload = {
+            group: document.getElementById('msg-group').value,
+            subject: document.getElementById('msg-subject').value,
+            body: document.getElementById('msg-body').value
+        };
+
+        try {
+            let res = await fetch('/api/usenet/post', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            let out = await res.json();
+            if(out.ok) {
+                txStatus.style.color = "#30df60";
+                txStatus.textContent = `BEACON RECORDED LOCKED AT COORDINATE V = ${out.v_target}`;
+                document.getElementById('msg-body').value = '';
+                queryUsenetFeed();
+            } else {
+                txStatus.style.color = "red";
+                txStatus.textContent = `ABORTED: ${out.error}`;
+            }
+        } catch (err) {
+            txStatus.style.color = "red";
+            txStatus.textContent = "CRITICAL: Transaction execution mapping fault.";
+        }
+    });
+
+    document.getElementById('btn-resolve').addEventListener('click', async () => {
+        let url = document.getElementById('resolver-url').value;
+        let outBox = document.getElementById('resolver-output');
+        if(!url.startsWith("burris://")) {
+            outBox.textContent = "Invalid Protocol Scheme. Must start with burris://";
+            return;
+        }
+        try {
+            let pathPart = url.substring(9);
+            let res = await fetch(`/api/resolve/${pathPart}`);
+            let data = await res.json();
+            outBox.textContent = JSON.stringify(data, null, 2);
+        } catch(err) { outBox.textContent = "Error communicating with translation node resolver."; }
+    });
+
+    setInterval(updateBridgeState, 2000);
+    setInterval(queryUsenetFeed, 4000);
+    updateBridgeState();
+    queryUsenetFeed();
+</script>
+</body>
+</html>
