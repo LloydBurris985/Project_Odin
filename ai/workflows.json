@@ -1,0 +1,16 @@
+{
+  "code_audit": {
+    "name": "Full Code Audit Pipeline",
+    "trigger_keywords": ["audit", "inspect code", "review code"],
+    "target_fallback": "odin_chat",
+    "capabilities": ["db_search", "ast_map", "generate_docs"],
+    "description": "Standard 3-stage static analysis and documentation sweep"
+  },
+  "asset_pipeline": {
+    "name": "LatticeFS Asset Packaging",
+    "trigger_keywords": ["package asset", "save sprite", "lattice pipeline"],
+    "target_fallback": "sprite_ship_alpha",
+    "capabilities": ["save_asset", "open_coordinate"],
+    "description": "Persist asset binary and index spatial coordinates in LatticeFS"
+  }
+}

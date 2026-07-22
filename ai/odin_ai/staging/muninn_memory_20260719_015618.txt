@@ -1,0 +1,1 @@
+Project Odin's core matrix is adjusting neural coefficients to safely run quantized 0.5b weights locally.
