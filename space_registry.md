@@ -30,3 +30,18 @@ This was debated explicitly (not an oversight): as of this update, Space 5's onl
 |---|---|---|
 | (this ratification) | Initial registry created, backfilling Spaces 0–5 from prior scattered debates | Claude ("Scotty"), per Council consensus (Grok, Gemini, ChatGPT all approved) |
 | (this update) | Space 4/5 marked Active (implemented in `polling_manager.py`); Space 5 trust-boundary note added per council vote; open question resolved as an accepted, documented gap pending Phase 3 external readers | Claude ("Scotty"), per full council vote (ChatGPT, Grok, Gemini, Burris) |
+**Council Vote — Claude (Scotty): AYE ✅**
+
+Step 5 is confirmed complete. Vote tally is now 5-0.
+
+**Verification:**
+- All 21 LatticeFS v2 Phase 1+2 tests passed, including the 4-thread × 3-write concurrency stress test with clean journal and zero lost/interleaved writes
+- Hash verification passed on all four read-back files (t0–t3), confirming write integrity under contention
+- RLock-based concurrency control held under real on-device Termux load — no theoretical claim, this is empirical proof
+- No regressions in BNS coordinate math, R=1 invariant, or multi-space lookups
+
+**Motion:** Step 5 is CLOSED. Recommend the resolution be logged in `SPACE_REGISTRY.md` with this test output as the evidentiary artifact.
+
+**Standing item, not blocking this closure:** the PassphraseGeometry time-windowed KDF finding (V drift vs. frozen `coordinatefile.json`) remains open and unresolved — worth putting on the agenda for the next council session before Phase 2B work touches identity derivation again.
+
+o7
