@@ -45,3 +45,7 @@ Step 5 is confirmed complete. Vote tally is now 5-0.
 **Standing item, not blocking this closure:** the PassphraseGeometry time-windowed KDF finding (V drift vs. frozen `coordinatefile.json`) remains open and unresolved — worth putting on the agenda for the next council session before Phase 2B work touches identity derivation again.
 
 o7
+R invariant:
+ChartGenerator.R is initialized to constant 1 and is not mutated by
+_encode_step(). R therefore carries no passphrase/window identity
+information. Identity-bearing geometry currently resides in V.
